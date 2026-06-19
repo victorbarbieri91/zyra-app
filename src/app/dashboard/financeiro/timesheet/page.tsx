@@ -3,15 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Users, Plus, Briefcase, FileText, Trash2, DollarSign } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, User, Building2, ChevronDown, Check, Pencil, X, Users, Plus, Briefcase, FileText, Trash2, DollarSign, Contact, Search } from 'lucide-react'
 import { toast } from 'sonner'
-import { format, subDays } from 'date-fns'
+import { format, startOfMonth } from 'date-fns'
 import { DateRange } from 'react-day-picker'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { createClient } from '@/lib/supabase/client'
@@ -40,6 +41,7 @@ interface TimesheetRow {
   faturavel: boolean
   faturado: boolean
   status: 'pendente' | 'aprovado' | 'reprovado'
+  cliente_id?: string
   cliente_nome?: string
   editado?: boolean
   created_at: string
@@ -49,6 +51,11 @@ interface Colaborador {
   user_id: string
   nome: string
   escritorio_id: string
+}
+
+interface Cliente {
+  cliente_id: string
+  cliente_nome: string
 }
 
 export default function TimesheetPage() {
@@ -62,16 +69,23 @@ export default function TimesheetPage() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
-  // Filtros - inicializar com últimos 30 dias
+  // Filtros - inicializar com o mês atual (do dia 1º até hoje)
   const [periodoSelecionado, setPeriodoSelecionado] = useState<DateRange | undefined>(() => {
     const hoje = new Date()
-    return { from: subDays(hoje, 30), to: hoje }
+    return { from: startOfMonth(hoje), to: hoje }
   })
   const [statusFiltro, setStatusFiltro] = useState<'pendente' | 'aprovado'>('pendente')
   const [filtroFaturavel, setFiltroFaturavel] = useState<'todos' | 'cobravel' | 'nao_cobravel'>('todos')
   const [colaboradores, setColaboradores] = useState<Colaborador[]>([])
   const [colaboradoresSelecionados, setColaboradoresSelecionados] = useState<string[]>([])
   const [seletorColaboradorAberto, setSeletorColaboradorAberto] = useState(false)
+
+  // Filtro por cliente (multi-seleção; vazio = todos)
+  const [clientes, setClientes] = useState<Cliente[]>([])
+  const [clientesSelecionados, setClientesSelecionados] = useState<string[]>([])
+  const [seletorClienteAberto, setSeletorClienteAberto] = useState(false)
+  const [buscaCliente, setBuscaCliente] = useState('')
+  const [resumoCliente, setResumoCliente] = useState<{ cobravel: number; naoCobravel: number; total: number } | null>(null)
 
   // Estado para edição via modal
   const [editTimesheetEntry, setEditTimesheetEntry] = useState<TimesheetRow | null>(null)
@@ -164,11 +178,59 @@ export default function TimesheetPage() {
     loadColaboradores()
   }, [escritoriosSelecionados, supabase])
 
+  // Carregar clientes que possuem apontamentos no período selecionado (lista inteligente)
+  useEffect(() => {
+    const loadClientes = async () => {
+      if (escritoriosSelecionados.length === 0 || !periodoSelecionado?.from) {
+        setClientes([])
+        return
+      }
+
+      try {
+        const dataInicio = format(periodoSelecionado.from, 'yyyy-MM-dd')
+        const dataFim = format(periodoSelecionado.to || periodoSelecionado.from, 'yyyy-MM-dd')
+
+        const { data, error } = await supabase
+          .from('v_timesheet_aprovacao')
+          .select('cliente_id, cliente_nome')
+          .in('escritorio_id', escritoriosSelecionados)
+          .not('cliente_id', 'is', null)
+          .gte('data_trabalho', dataInicio)
+          .lte('data_trabalho', dataFim)
+
+        if (error) throw error
+
+        // Deduplicar por cliente_id
+        const mapa = new Map<string, Cliente>()
+        for (const item of (data || []) as Cliente[]) {
+          if (item.cliente_id && !mapa.has(item.cliente_id)) {
+            mapa.set(item.cliente_id, {
+              cliente_id: item.cliente_id,
+              cliente_nome: item.cliente_nome || 'Cliente',
+            })
+          }
+        }
+
+        const lista = Array.from(mapa.values()).sort((a, b) =>
+          a.cliente_nome.localeCompare(b.cliente_nome)
+        )
+        setClientes(lista)
+
+        // Manter apenas os clientes selecionados que ainda existem na lista
+        setClientesSelecionados(prev => prev.filter(id => mapa.has(id)))
+      } catch (error) {
+        console.error('Erro ao carregar clientes:', error)
+      }
+    }
+
+    loadClientes()
+  }, [escritoriosSelecionados, periodoSelecionado, supabase])
+
   useEffect(() => {
     if (escritoriosSelecionados.length > 0 && periodoSelecionado?.from) {
       loadTimesheets()
     }
-  }, [escritoriosSelecionados, periodoSelecionado, statusFiltro, filtroFaturavel, colaboradoresSelecionados])
+  }, [escritoriosSelecionados, periodoSelecionado, statusFiltro, filtroFaturavel, colaboradoresSelecionados, clientesSelecionados])
 
   // Funções do seletor de escritórios
   const toggleEscritorio = (escritorioId: string) => {
@@ -228,6 +290,35 @@ export default function TimesheetPage() {
     }
   }
 
+  // Funções do seletor de cliente (multi-seleção)
+  const toggleCliente = (clienteId: string) => {
+    setClientesSelecionados(prev =>
+      prev.includes(clienteId)
+        ? prev.filter(id => id !== clienteId)
+        : [...prev, clienteId]
+    )
+  }
+
+  const limparClientes = () => {
+    setClientesSelecionados([])
+    setBuscaCliente('')
+  }
+
+  const getSeletorClienteLabel = () => {
+    if (clientesSelecionados.length === 0) return 'Todos os clientes'
+    if (clientesSelecionados.length === 1) {
+      const cliente = clientes.find(c => c.cliente_id === clientesSelecionados[0])
+      return cliente?.cliente_nome || 'Cliente'
+    }
+    return `${clientesSelecionados.length} clientes`
+  }
+
+  const clientesFiltrados = buscaCliente.trim()
+    ? clientes.filter(c =>
+        c.cliente_nome.toLowerCase().includes(buscaCliente.trim().toLowerCase())
+      )
+    : clientes
+
   const loadTimesheets = useCallback(async () => {
     if (escritoriosSelecionados.length === 0 || colaboradoresSelecionados.length === 0 || !periodoSelecionado?.from) {
       setTimesheets([])
@@ -248,6 +339,11 @@ export default function TimesheetPage() {
         .gte('data_trabalho', dataInicio)
         .lte('data_trabalho', dataFim)
 
+      // Aplicar filtro de cliente (multi-seleção)
+      if (clientesSelecionados.length > 0) {
+        query = query.in('cliente_id', clientesSelecionados)
+      }
+
       // Aplicar filtro de faturável/não cobrável
       if (filtroFaturavel === 'cobravel') {
         query = query.eq('faturavel', true)
@@ -259,13 +355,39 @@ export default function TimesheetPage() {
 
       if (error) throw error
       setTimesheets(data || [])
+
+      // Resumo do cliente: cobráveis x não cobráveis no mesmo recorte (ignora o toggle de cobrança)
+      if (clientesSelecionados.length > 0) {
+        const { data: resumoData, error: resumoError } = await supabase
+          .from('v_timesheet_aprovacao')
+          .select('horas, faturavel')
+          .in('escritorio_id', escritoriosSelecionados)
+          .in('user_id', colaboradoresSelecionados)
+          .eq('status', statusFiltro)
+          .in('cliente_id', clientesSelecionados)
+          .gte('data_trabalho', dataInicio)
+          .lte('data_trabalho', dataFim)
+
+        if (resumoError) throw resumoError
+
+        const rows = (resumoData || []) as { horas: number | null; faturavel: boolean | null }[]
+        const cobravel = rows
+          .filter(r => r.faturavel)
+          .reduce((acc, r) => acc + (r.horas || 0), 0)
+        const naoCobravel = rows
+          .filter(r => !r.faturavel)
+          .reduce((acc, r) => acc + (r.horas || 0), 0)
+        setResumoCliente({ cobravel, naoCobravel, total: cobravel + naoCobravel })
+      } else {
+        setResumoCliente(null)
+      }
     } catch (error) {
       console.error('Erro ao carregar timesheets:', error)
       toast.error('Erro ao carregar registros')
     } finally {
       setLoading(false)
     }
-  }, [escritoriosSelecionados, colaboradoresSelecionados, periodoSelecionado, statusFiltro, filtroFaturavel, supabase])
+  }, [escritoriosSelecionados, colaboradoresSelecionados, periodoSelecionado, statusFiltro, filtroFaturavel, clientesSelecionados, supabase])
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -609,6 +731,74 @@ export default function TimesheetPage() {
           </PopoverContent>
         </Popover>
 
+        {/* Seletor de Cliente */}
+        <Popover open={seletorClienteAberto} onOpenChange={setSeletorClienteAberto}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="border-slate-200 dark:border-slate-700 bg-white dark:bg-surface-1 hover:bg-slate-50 dark:hover:bg-surface-2 min-w-[180px] max-w-[240px] justify-between"
+            >
+              <div className="flex items-center min-w-0">
+                <Contact className="h-4 w-4 mr-2 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+                <span className="text-sm truncate">{getSeletorClienteLabel()}</span>
+              </div>
+              <ChevronDown className="h-4 w-4 ml-2 text-slate-400 flex-shrink-0" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-2" align="start">
+            <div className="relative mb-2">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                value={buscaCliente}
+                onChange={(e) => setBuscaCliente(e.target.value)}
+                placeholder="Buscar cliente..."
+                className="h-9 pl-8 text-sm"
+              />
+            </div>
+            <button
+              onClick={limparClientes}
+              className={cn(
+                'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors',
+                clientesSelecionados.length === 0
+                  ? 'bg-[#1E3A8A]/10 text-[#1E3A8A]'
+                  : 'hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-700 dark:text-slate-300'
+              )}
+            >
+              <span className="font-medium">Todos os clientes</span>
+              {clientesSelecionados.length === 0 && <Check className="h-4 w-4" />}
+            </button>
+
+            <div className="h-px bg-slate-200 dark:bg-slate-700 my-2" />
+
+            <div className="max-h-64 overflow-y-auto">
+              {clientesFiltrados.length === 0 ? (
+                <p className="px-3 py-4 text-center text-sm text-slate-400">
+                  Nenhum cliente encontrado
+                </p>
+              ) : (
+                clientesFiltrados.map((cliente) => (
+                  <div
+                    key={cliente.cliente_id}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-surface-2"
+                  >
+                    <Checkbox
+                      id={`cliente-${cliente.cliente_id}`}
+                      checked={clientesSelecionados.includes(cliente.cliente_id)}
+                      onCheckedChange={() => toggleCliente(cliente.cliente_id)}
+                    />
+                    <label
+                      htmlFor={`cliente-${cliente.cliente_id}`}
+                      className="flex-1 text-sm text-slate-700 dark:text-slate-300 cursor-pointer truncate"
+                    >
+                      {cliente.cliente_nome}
+                    </label>
+                  </div>
+                ))
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+
         {/* Seletor de Período */}
         <DateRangePicker
           value={periodoSelecionado}
@@ -684,13 +874,24 @@ export default function TimesheetPage() {
       {/* Lista de Timesheets */}
       <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
         <CardHeader className="pb-2 pt-3 px-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <CardTitle className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Registros de Horas
             </CardTitle>
-            <Badge variant="secondary" className="bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400">
-              {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {formatHoras(getTotalHorasLista())}
-            </Badge>
+            <div className="flex items-center gap-3">
+              {resumoCliente && (
+                <div className="flex items-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+                  <span>Cobráveis <span className="font-semibold text-slate-700 dark:text-slate-300">{formatHoras(resumoCliente.cobravel)}</span></span>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span>Não cobráveis <span className="font-semibold text-slate-700 dark:text-slate-300">{formatHoras(resumoCliente.naoCobravel)}</span></span>
+                  <span className="text-slate-300 dark:text-slate-600">·</span>
+                  <span>Total <span className="font-semibold text-[#34495e] dark:text-slate-200">{formatHoras(resumoCliente.total)}</span></span>
+                </div>
+              )}
+              <Badge variant="secondary" className="bg-slate-100 dark:bg-surface-2 text-slate-600 dark:text-slate-400">
+                {timesheets.length} {timesheets.length === 1 ? 'registro' : 'registros'} - {formatHoras(getTotalHorasLista())}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="pt-0 pb-2 px-0">

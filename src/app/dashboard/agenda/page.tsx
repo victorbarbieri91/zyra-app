@@ -1303,8 +1303,8 @@ export default function AgendaPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header — oculto nas views Mês e Kanban (barra única vem da própria view, fiel ao design) */}
-        {viewMode !== 'month' && viewMode !== 'week' && (
+        {/* Header — oculto nas views Mês, Kanban e Lista (barra única vem da própria view, fiel ao design) */}
+        {viewMode !== 'month' && viewMode !== 'week' && viewMode !== 'list' && (
         <div>
           {/* Linha 1: Título */}
           <div className="mb-3 md:mb-4">
@@ -1524,6 +1524,9 @@ export default function AgendaPage() {
               <CalendarListView
                 escritorioId={escritorioId || undefined}
                 userId={userId || undefined}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                onCreate={(tipo) => handleCreateEvent(undefined, tipo)}
                 onTarefaClick={(tarefa) => {
                   setTarefaSelecionada(tarefa)
                   setTarefaDetailOpen(true)
@@ -1539,6 +1542,14 @@ export default function AgendaPage() {
                 onTaskComplete={handleCompleteTask}
                 onAudienciaComplete={handleRealizarAudiencia}
                 onEventoComplete={handleMarcarEventoCumprido}
+                onTaskReopen={handleReopenTask}
+                onAudienciaReopen={(id) => handleReabrirAudiencia(id)}
+                onEventoReopen={(id) => handleReabrirEvento(id)}
+                onLancarHoras={handleLancarHoras}
+                onRescheduleTask={handleRescheduleTask}
+                onRescheduleEvento={handleEventMove}
+                onProcessoClick={handleProcessoClick}
+                onConsultivoClick={handleConsultivoClick}
               />
             )}
           </>

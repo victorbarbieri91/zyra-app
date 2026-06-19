@@ -2,8 +2,7 @@
 
 import { useMemo, useState, useEffect, useRef } from 'react'
 import { DndContext, DragOverlay, DragEndEvent, DragStartEvent, closestCenter } from '@dnd-kit/core'
-import { Button } from '@/components/ui/button'
-import { CalendarDays, ChevronLeft, ChevronRight, ListTodo, PlayCircle, PauseCircle, CheckCircle2 } from 'lucide-react'
+import { CalendarDays, ChevronLeft, ChevronRight, Move } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { parseDBDate, isToday as isTodayBrazil, getNowInBrazil, startOfDayInBrazil } from '@/lib/timezone'
 import { format, addDays, subDays, isSameDay } from 'date-fns'
@@ -14,6 +13,7 @@ import { useAudiencias, Audiencia } from '@/hooks/useAudiencias'
 import KanbanColumn from './KanbanColumn'
 import KanbanTaskCard from './KanbanTaskCard'
 import KanbanAgendaCard, { AgendaCardItem } from './KanbanAgendaCard'
+import { AgendaViewTabs, AgendaCreateButtons } from './AgendaTopBar'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { createClient } from '@/lib/supabase/client'
@@ -56,6 +56,10 @@ interface CalendarKanbanViewProps {
    * Kanban), e a página não tem como atualizar as instâncias de hook do Kanban.
    */
   refreshKey?: number
+  /** Barra unificada (igual ao calendário): abas + botões criar */
+  viewMode?: 'month' | 'week' | 'day' | 'list'
+  onViewModeChange?: (v: 'month' | 'week' | 'day' | 'list') => void
+  onCreate?: (tipo: 'compromisso' | 'audiencia' | 'tarefa') => void
   className?: string
 }
 
@@ -70,6 +74,9 @@ export default function CalendarKanbanView({
   onCreateTarefa,
   onTaskComplete,
   refreshKey,
+  viewMode,
+  onViewModeChange,
+  onCreate,
   className,
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
@@ -789,93 +796,109 @@ export default function CalendarKanbanView({
     { key: 'evento', label: 'Compromissos' },
   ]
 
+  const navBtn =
+    'w-[30px] h-[30px] rounded-lg border border-[#e6e3da] dark:border-[#253345] text-[#2c3e50] dark:text-[#d8e2ef] inline-flex items-center justify-center hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors'
+
   return (
-    <div className={cn('space-y-3', className)}>
-      {/* Header de Navegação */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h2 className="text-xl font-semibold text-[#34495e] dark:text-slate-200">
-            {isRangeActive
-              ? `${format(dateRange!.from!, "d MMM", { locale: ptBR }).replace('.', '')} — ${format(dateRange!.to!, "d MMM", { locale: ptBR }).replace('.', '')}`
-              : format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
-          </h2>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={previousDay}
-              className="h-7 w-7 p-0 border-slate-200 dark:border-slate-700"
+    <div className={cn('flex flex-col gap-3', className)}>
+      {/* Barra única (design): dia + navegação · visualizações · criar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-4">
+        {/* esquerda: dia + navegação + período + "weekday · hoje" */}
+        <div className="min-w-0 lg:justify-self-start">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h2
+              className="text-[28px] font-medium text-[#2c3e50] dark:text-[#edf1f7] tracking-[-0.03em] leading-none"
+              style={{ fontFamily: 'var(--font-fraunces)' }}
             >
-              <ChevronLeft className="h-3.5 w-3.5" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={nextDay}
-              className="h-7 w-7 p-0 border-slate-200 dark:border-slate-700"
-            >
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Button>
+              {isRangeActive ? (
+                <>
+                  {format(dateRange!.from!, 'd MMM', { locale: ptBR }).replace('.', '')}
+                  <span className="text-[#9aa1a8] dark:text-[#5a6675] italic font-normal">
+                    {' '}— {format(dateRange!.to!, 'd MMM', { locale: ptBR }).replace('.', '')}
+                  </span>
+                </>
+              ) : (
+                <>
+                  {format(selectedDate, 'd', { locale: ptBR })}{' '}
+                  <span className="text-[#9aa1a8] dark:text-[#5a6675] italic font-normal">
+                    {format(selectedDate, "'de' MMMM", { locale: ptBR })}
+                  </span>
+                </>
+              )}
+            </h2>
+            <div className="flex items-center gap-1">
+              <button onClick={previousDay} title="Dia anterior" className={navBtn}>
+                <ChevronLeft className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={goToToday} title="Ir para hoje" className={cn(navBtn, 'w-auto px-3 text-[12px] font-semibold')}>
+                Hoje
+              </button>
+              <button onClick={nextDay} title="Próximo dia" className={navBtn}>
+                <ChevronRight className="h-3.5 w-3.5" />
+              </button>
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger asChild>
+                  <button
+                    title="Selecionar período"
+                    className={cn(navBtn, isRangeActive && 'border-[#89bcbe] text-[#89bcbe] bg-[#eef6f6] dark:bg-[#89bcbe]/[0.12]')}
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="range" selected={dateRange} onSelect={handleDateRangeSelect} numberOfMonths={1} defaultMonth={selectedDate} />
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className={cn(
-                  'h-7 w-7 p-0 border-slate-200 dark:border-slate-700',
-                  isRangeActive && 'border-[#89bcbe] bg-[#f0f9f9] dark:bg-teal-900/20 text-[#89bcbe]'
-                )}
-                title="Selecionar período"
-              >
-                <CalendarDays className="h-3.5 w-3.5" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="range"
-                selected={dateRange}
-                onSelect={handleDateRangeSelect}
-                numberOfMonths={1}
-                defaultMonth={selectedDate}
-              />
-            </PopoverContent>
-          </Popover>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToToday}
-            className="h-7 text-xs border-slate-200 dark:border-slate-700 hover:border-[#89bcbe] hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20 px-2.5"
-          >
-            Hoje
-          </Button>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] flex-shrink-0" />
+            <span className="text-[12.5px] text-[#5a6775] dark:text-[#8a97a8]">
+              Hoje é{' '}
+              <span className="font-semibold text-[#34495e] dark:text-[#d8e2ef]">
+                {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+              </span>
+            </span>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {/* Filtros por tipo */}
-          <div className="flex items-center gap-1">
-            {filterOptions.map(({ key, label }) => (
+        {/* centro: visualizações */}
+        {viewMode && onViewModeChange && (
+          <AgendaViewTabs viewMode={viewMode} onViewModeChange={onViewModeChange} className="lg:justify-self-center" />
+        )}
+
+        {/* direita: criar */}
+        {onCreate && <AgendaCreateButtons onCreate={onCreate} className="lg:justify-self-end" />}
+      </div>
+
+      {/* faixa de contexto: filtros + dica/contador */}
+      <div className="flex items-center justify-between gap-3 flex-wrap border-t border-[#e6e3da] dark:border-[#253345] pt-3">
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {filterOptions.map(({ key, label }) => {
+            const on = activeFilter === key
+            return (
               <button
                 key={key}
                 onClick={() => setActiveFilter(key)}
                 className={cn(
-                  'px-2.5 py-1 rounded-full text-[11px] font-medium transition-colors',
-                  activeFilter === key
-                    ? 'bg-[#34495e] text-white shadow-sm'
-                    : 'bg-slate-100 dark:bg-surface-2 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-surface-3 hover:text-slate-700 dark:hover:text-slate-300'
+                  'h-[30px] px-3 rounded-lg text-[12px] font-semibold border transition-colors',
+                  on
+                    ? 'border-transparent bg-gradient-to-br from-[#34495e] to-[#46627f] text-white'
+                    : 'border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-[#8a97a8] hover:border-[#89bcbe]',
                 )}
               >
                 {label}
               </button>
-            ))}
-          </div>
-
-          {totalItems > 0 && (
-            <span className="text-xs text-slate-400 dark:text-slate-500">
-              {totalItems} {totalItems === 1 ? 'item' : 'itens'}
-            </span>
-          )}
+            )
+          })}
         </div>
+        <span className="inline-flex items-center gap-1.5 text-[11.5px] text-[#9aa1a8] dark:text-[#5a6675]">
+          <Move className="w-3 h-3" />
+          Arraste entre colunas para mudar o status ·{' '}
+          <strong className="font-semibold text-[#5a6775] dark:text-[#8a97a8]">
+            {totalItems} {totalItems === 1 ? 'item' : 'itens'}
+          </strong>
+        </span>
       </div>
 
       {/* Kanban Board */}
@@ -884,52 +907,37 @@ export default function CalendarKanbanView({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="grid grid-cols-4 gap-3 h-[calc(100vh-300px)] min-h-[500px]">
+        <div className="flex gap-3 h-[calc(100vh-238px)] min-h-[480px]">
           <KanbanColumn
-            titulo="Pendente"
-            icone={<ListTodo className="w-3.5 h-3.5 text-[#46627f]" />}
+            label="Pendente"
             status="pendente"
             tarefas={filterTarefas(pendente)}
             agendaItems={filterAgendaItems(agendaPendente)}
-            corBarra="bg-[#34495e]"
-            corIconeBg="bg-slate-100 dark:bg-surface-2"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
             onCreateTarefa={() => onCreateTarefa('pendente')}
           />
-
           <KanbanColumn
-            titulo="Em Andamento"
-            icone={<PlayCircle className="w-3.5 h-3.5 text-[#89bcbe]" />}
+            label="Em andamento"
             status="em_andamento"
             tarefas={filterTarefas(em_andamento)}
             agendaItems={filterAgendaItems(agendaEmAndamento)}
-            corBarra="bg-[#89bcbe]"
-            corIconeBg="bg-[#f0f9f9] dark:bg-teal-900/20"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />
-
           <KanbanColumn
-            titulo="Em Pausa"
-            icone={<PauseCircle className="w-3.5 h-3.5 text-amber-500" />}
+            label="Em pausa"
             status="em_pausa"
             tarefas={filterTarefas(em_pausa)}
             agendaItems={filterAgendaItems(agendaEmPausa)}
-            corBarra="bg-amber-400"
-            corIconeBg="bg-amber-50 dark:bg-amber-500/10"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />
-
           <KanbanColumn
-            titulo="Concluída"
-            icone={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />}
+            label="Concluída"
             status="concluida"
             tarefas={filterTarefas(concluida)}
             agendaItems={filterAgendaItems(agendaConcluida)}
-            corBarra="bg-emerald-500"
-            corIconeBg="bg-emerald-50 dark:bg-emerald-500/10"
             onClickTarefa={onClickTarefa}
             onClickAgendaItem={handleClickAgendaItem}
           />

@@ -1303,8 +1303,8 @@ export default function AgendaPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header — oculto na view Mês (a barra única vem do calendário, fiel ao design) */}
-        {viewMode !== 'month' && (
+        {/* Header — oculto nas views Mês e Kanban (barra única vem da própria view, fiel ao design) */}
+        {viewMode !== 'month' && viewMode !== 'week' && (
         <div>
           {/* Linha 1: Título */}
           <div className="mb-3 md:mb-4">
@@ -1475,6 +1475,9 @@ export default function AgendaPage() {
                 }}
                 onTaskComplete={handleCompleteTask}
                 refreshKey={kanbanRefreshKey}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                onCreate={(tipo) => handleCreateEvent(undefined, tipo)}
               />
             )}
 

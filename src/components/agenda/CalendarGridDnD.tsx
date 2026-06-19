@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Move, Calendar, Users, Scale, Plus, Clock, List, LayoutGrid, Eye, EyeOff, type LucideIcon } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Move, Calendar, Eye, EyeOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { parseDBDate } from '@/lib/timezone'
@@ -28,6 +28,7 @@ import { ptBR } from 'date-fns/locale'
 import { EventCardProps } from './EventCard'
 import AgendaFiltersCompact, { EventFiltersState } from './AgendaFiltersCompact'
 import CalendarEventMiniCard, { PRIORIDADE_COR } from './CalendarEventMiniCard'
+import { AgendaViewTabs, AgendaCreateButtons } from './AgendaTopBar'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import {
   Popover,
@@ -80,20 +81,6 @@ interface CalendarGridDnDProps {
 // Cores dos eventos (tarefas usam PRIORIDADE_COR, importado do mini-card)
 const EVENTO_COR = { audiencia: '#a85a3e', compromisso: '#3f7376' }
 const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-// abas de visualização (centro da barra)
-const VIEW_TABS: { v: 'month' | 'week' | 'day' | 'list'; l: string; Icon: LucideIcon; show: string }[] = [
-  { v: 'month', l: 'Mês', Icon: Calendar, show: 'hidden md:inline-flex' },
-  { v: 'week', l: 'Kanban', Icon: LayoutGrid, show: 'hidden md:inline-flex' },
-  { v: 'day', l: 'Dia', Icon: Clock, show: 'inline-flex' },
-  { v: 'list', l: 'Lista', Icon: List, show: 'inline-flex' },
-]
-// botões de criar (direita da barra) — cores quentes do design
-const CREATE_BTNS: { tipo: 'compromisso' | 'audiencia' | 'tarefa'; l: string; Icon: LucideIcon; bg: string }[] = [
-  { tipo: 'compromisso', l: 'Compromisso', Icon: Users, bg: 'bg-[#3f7376] hover:bg-[#386668]' },
-  { tipo: 'audiencia', l: 'Audiência', Icon: Scale, bg: 'bg-[#a85a3e] hover:bg-[#964f37]' },
-  { tipo: 'tarefa', l: 'Nova tarefa', Icon: Plus, bg: 'bg-[#34495e] hover:bg-[#2c3e50]' },
-]
 
 // ── Item arrastável ──
 function DraggableEvent({
@@ -485,46 +472,12 @@ export default function CalendarGridDnD({
 
           {/* centro: visualizações */}
           {viewMode && onViewModeChange && (
-            <div className="lg:justify-self-center inline-flex items-center gap-0.5 p-[3px] rounded-[11px] bg-[#ece9e2] dark:bg-[#10161f] w-fit">
-              {VIEW_TABS.map((tab) => {
-                const on = viewMode === tab.v
-                return (
-                  <button
-                    key={tab.v}
-                    onClick={() => onViewModeChange(tab.v)}
-                    className={cn(
-                      'items-center gap-2 h-9 px-3.5 rounded-[8px] text-[13px] font-semibold transition-colors',
-                      tab.show,
-                      on
-                        ? 'bg-[#ffffff] dark:bg-teal-300 text-[#34495e] shadow-sm'
-                        : 'text-[#5a6775] dark:text-[#8a97a8] hover:text-[#34495e] dark:hover:text-slate-300',
-                    )}
-                  >
-                    <tab.Icon className="w-4 h-4" />
-                    {tab.l}
-                  </button>
-                )
-              })}
-            </div>
+            <AgendaViewTabs viewMode={viewMode} onViewModeChange={onViewModeChange} className="lg:justify-self-center" />
           )}
 
           {/* direita: criar */}
           {onCreate && (
-            <div className="lg:justify-self-end flex items-center gap-2 flex-wrap">
-              {CREATE_BTNS.map((c) => (
-                <button
-                  key={c.tipo}
-                  onClick={() => onCreate(c.tipo)}
-                  className={cn(
-                    'h-9 px-3.5 rounded-[10px] text-[13px] font-semibold text-white inline-flex items-center gap-2 shadow-sm whitespace-nowrap transition-[filter] hover:brightness-[1.06]',
-                    c.bg,
-                  )}
-                >
-                  <c.Icon className="w-4 h-4" />
-                  {c.l}
-                </button>
-              ))}
-            </div>
+            <AgendaCreateButtons onCreate={onCreate} className="lg:justify-self-end" />
           )}
         </div>
 

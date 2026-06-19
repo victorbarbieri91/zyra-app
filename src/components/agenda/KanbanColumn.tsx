@@ -1,111 +1,108 @@
 'use client'
 
 import { useDroppable } from '@dnd-kit/core'
-import { Plus } from 'lucide-react'
+import { Plus, Flag } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { parseDBDate } from '@/lib/timezone'
+import { differenceInCalendarDays } from 'date-fns'
 import { Tarefa } from '@/hooks/useTarefas'
 import KanbanTaskCard from './KanbanTaskCard'
 import KanbanAgendaCard, { AgendaCardItem } from './KanbanAgendaCard'
 
+type Status = 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida'
+
+// Cores por status (variant "c" do design) — classes literais (JIT)
+const STATUS_STYLE: Record<Status, { pill: string; band: string; dot: string }> = {
+  pendente:     { pill: 'bg-[#46627f]', band: 'bg-[#46627f]/[0.07] dark:bg-[#46627f]/[0.16]', dot: 'bg-[#46627f] dark:bg-[#9eb1cc]' },
+  em_andamento: { pill: 'bg-[#3f7376]', band: 'bg-[#3f7376]/[0.07] dark:bg-[#3f7376]/[0.16]', dot: 'bg-[#3f7376] dark:bg-[#7fb8ba]' },
+  em_pausa:     { pill: 'bg-[#8a6438]', band: 'bg-[#8a6438]/[0.07] dark:bg-[#8a6438]/[0.16]', dot: 'bg-[#8a6438] dark:bg-[#d6a87a]' },
+  concluida:    { pill: 'bg-[#3f6a54]', band: 'bg-[#3f6a54]/[0.07] dark:bg-[#3f6a54]/[0.16]', dot: 'bg-[#3f6a54] dark:bg-[#8db8a0]' },
+}
+
 interface KanbanColumnProps {
-  titulo: string
-  icone: React.ReactNode
-  status: 'pendente' | 'em_andamento' | 'em_pausa' | 'concluida'
+  label: string
+  status: Status
   tarefas: Tarefa[]
   agendaItems?: AgendaCardItem[]
-  corBarra: string
-  corIconeBg: string
   onClickTarefa: (tarefa: Tarefa) => void
   onClickAgendaItem?: (item: AgendaCardItem) => void
   onCreateTarefa?: () => void
 }
 
 export default function KanbanColumn({
-  titulo,
-  icone,
+  label,
   status,
   tarefas,
   agendaItems = [],
-  corBarra,
-  corIconeBg,
   onClickTarefa,
   onClickAgendaItem,
   onCreateTarefa,
 }: KanbanColumnProps) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: status,
-    data: {
-      tipo: 'coluna',
-      status: status,
-    },
-  })
+  const { setNodeRef, isOver } = useDroppable({ id: status, data: { tipo: 'coluna', status } })
 
+  const s = STATUS_STYLE[status]
   const totalItems = tarefas.length + agendaItems.length
+  const prazoCount = tarefas.filter(
+    (t) => t.prazo_data_limite && differenceInCalendarDays(parseDBDate(t.prazo_data_limite), new Date()) <= 2,
+  ).length
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-      {/* Barra colorida fina no topo */}
-      <div className={cn('h-1 rounded-t-lg', corBarra)} />
-
-      {/* Header minimalista */}
-      <div className="px-3 py-2 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-        <div className="flex items-center gap-2">
-          <div className={cn('w-5 h-5 rounded-md flex items-center justify-center', corIconeBg)}>
-            {icone}
-          </div>
-          <span className="font-semibold text-xs text-[#34495e] dark:text-slate-200">{titulo}</span>
-        </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-surface-2 px-2 py-0.5 rounded-full font-medium">
-          {totalItems}
-        </span>
-      </div>
-
-      {/* Lista de Cards - Droppable */}
-      <div
-        ref={setNodeRef}
-        className={cn(
-          'flex-1 p-2 bg-slate-50/50 dark:bg-surface-0/50 overflow-y-auto space-y-2 min-h-[200px]',
-          isOver && 'bg-blue-50 dark:bg-blue-500/10 border-2 border-dashed border-blue-300 rounded-md'
-        )}
-      >
-        {/* Agenda items (compromissos/audiências) - draggable, aparecem primeiro */}
-        {agendaItems.map((item) => (
-          <KanbanAgendaCard
-            key={item.id}
-            item={item}
-            onClick={() => onClickAgendaItem?.(item)}
-            draggable
-          />
-        ))}
-
-        {/* Tarefas - draggable */}
-        {tarefas.map((tarefa) => (
-          <KanbanTaskCard key={tarefa.id} tarefa={tarefa} onClick={() => onClickTarefa(tarefa)} />
-        ))}
-
-        {totalItems === 0 && !isOver && (
-          <div className="flex items-center justify-center h-24 text-center text-slate-400 dark:text-slate-400 text-xs">
-            Nenhum item
-          </div>
-        )}
-
-        {isOver && totalItems === 0 && (
-          <div className="flex items-center justify-center h-24 text-center text-blue-500 text-xs font-medium">
-            Solte aqui
-          </div>
-        )}
-      </div>
-
-      {/* Footer - Botão Nova Tarefa (só em Pendente) */}
-      {status === 'pendente' && onCreateTarefa && (
-        <button
-          onClick={onCreateTarefa}
-          className="px-3 py-2 border-t border-slate-100 dark:border-slate-800 text-xs text-[#89bcbe] hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors flex items-center justify-center gap-1.5"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span className="font-medium">Nova Tarefa</span>
-        </button>
+    <div
+      ref={setNodeRef}
+      className={cn(
+        'flex-1 min-w-[280px] flex flex-col min-h-0 rounded-[14px] overflow-hidden border transition-colors',
+        isOver
+          ? 'border-[#89bcbe] bg-[#eef6f6] dark:bg-[#89bcbe]/[0.06]'
+          : 'border-[#e6e3da] dark:border-[#253345] bg-[#f6f4ee] dark:bg-[#0f141c]',
       )}
+    >
+      {/* header (variant c): pílula sólida sobre faixa tingida */}
+      <div className={cn('flex items-center justify-between gap-2 px-3.5 py-3 border-b border-[#e6e3da] dark:border-[#253345] flex-shrink-0', s.band)}>
+        <span className={cn('inline-flex items-center gap-2 h-7 px-3 rounded-lg text-white text-[12.5px] font-bold', s.pill)}>
+          {label}
+          <span className="font-mono text-[11px] font-bold bg-white/[0.22] rounded-[7px] min-w-[18px] h-[18px] px-[5px] inline-flex items-center justify-center">
+            {totalItems}
+          </span>
+        </span>
+        {prazoCount > 0 && (
+          <span
+            title={`${prazoCount} com prazo fatal crítico`}
+            className="inline-flex items-center gap-1 h-5 px-2 rounded-md text-[10.5px] font-bold text-[#a85a3e] dark:text-[#e0a085] bg-[#f9ebe6] dark:bg-[#a85a3e]/[0.18] whitespace-nowrap"
+          >
+            <Flag className="w-2.5 h-2.5" />
+            {prazoCount}
+          </span>
+        )}
+      </div>
+
+      {/* corpo */}
+      <div className="flex-1 overflow-y-auto p-3 flex flex-col gap-2.5 min-h-0">
+        {totalItems === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-2 py-8 rounded-[11px] border border-dashed border-[#e6e3da] dark:border-[#253345] text-[#9aa1a8] dark:text-[#5a6675]">
+            <span className={cn('w-2 h-2 rounded-full opacity-60', s.dot)} />
+            <span className="text-[12px]">Nenhum item</span>
+          </div>
+        ) : (
+          <>
+            {agendaItems.map((item) => (
+              <KanbanAgendaCard key={item.id} item={item} onClick={() => onClickAgendaItem?.(item)} draggable />
+            ))}
+            {tarefas.map((tarefa) => (
+              <KanbanTaskCard key={tarefa.id} tarefa={tarefa} onClick={() => onClickTarefa(tarefa)} />
+            ))}
+          </>
+        )}
+
+        {status === 'pendente' && onCreateTarefa && (
+          <button
+            onClick={onCreateTarefa}
+            className="mt-0.5 py-2 rounded-[10px] border border-dashed border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-[#8a97a8] hover:border-[#89bcbe] hover:text-[#3f7376] text-[12px] font-semibold inline-flex items-center justify-center gap-1.5 transition-colors flex-shrink-0"
+          >
+            <Plus className="w-3 h-3" />
+            Nova tarefa
+          </button>
+        )}
+      </div>
     </div>
   )
 }

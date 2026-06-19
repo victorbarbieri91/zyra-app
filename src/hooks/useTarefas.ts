@@ -46,6 +46,7 @@ export interface Tarefa {
   responsavel_nome?: string
   criado_por_nome?: string
   caso_titulo?: string | null
+  processo_numero?: string | null
 
   // Múltiplos responsáveis (array direto na coluna)
   responsaveis_ids: string[]
@@ -98,7 +99,7 @@ export function useTarefas(escritorioId?: string, options?: UseTarefasOptions) {
           *,
           responsavel:profiles!responsavel_id(nome_completo),
           criado_por_user:profiles!criado_por(nome_completo),
-          processo:processos_processos!processo_id(autor, reu),
+          processo:processos_processos!processo_id(numero_cnj, autor, reu),
           consultivo:consultivo_consultas!consultivo_id(titulo)
         `)
         .neq('status', 'cancelada')
@@ -132,6 +133,7 @@ export function useTarefas(escritorioId?: string, options?: UseTarefasOptions) {
         ...t,
         responsavel_nome: t.responsavel?.nome_completo,
         criado_por_nome: t.criado_por_user?.nome_completo,
+        processo_numero: t.processo?.numero_cnj || null,
         caso_titulo: t.processo
           ? `${t.processo.autor} x ${t.processo.reu}`
           : t.consultivo?.titulo || null,

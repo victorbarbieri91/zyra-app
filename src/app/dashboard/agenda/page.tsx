@@ -1303,7 +1303,8 @@ export default function AgendaPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-        {/* Header */}
+        {/* Header — oculto na view Mês (a barra única vem do calendário, fiel ao design) */}
+        {viewMode !== 'month' && (
         <div>
           {/* Linha 1: Título */}
           <div className="mb-3 md:mb-4">
@@ -1320,56 +1321,56 @@ export default function AgendaPage() {
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'compromisso')}
-                className="h-8 min-w-[110px] md:w-[130px] text-xs bg-gradient-to-br from-[#aacfd0] to-[#89bcbe] hover:from-[#89bcbe] hover:to-[#6ba9ab] active:from-[#6ba9ab] text-[#34495e] dark:text-slate-200 border-0 shadow-sm whitespace-nowrap"
+                className="h-9 min-w-[120px] md:w-[140px] text-[13px] font-semibold bg-[#3f7376] hover:bg-[#386668] text-white border-0 rounded-[10px] shadow-sm whitespace-nowrap"
               >
-                <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+                <CalendarIcon className="w-4 h-4 mr-2" />
                 Compromisso
               </Button>
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'audiencia')}
-                className="h-8 min-w-[100px] md:w-[130px] text-xs bg-gradient-to-br from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 active:from-emerald-700 text-white border-0 shadow-sm whitespace-nowrap"
+                className="h-9 min-w-[110px] md:w-[140px] text-[13px] font-semibold bg-[#a85a3e] hover:bg-[#964f37] text-white border-0 rounded-[10px] shadow-sm whitespace-nowrap"
               >
-                <CalendarDays className="w-3.5 h-3.5 mr-1.5" />
+                <CalendarDays className="w-4 h-4 mr-2" />
                 Audiência
               </Button>
               <Button
                 size="sm"
                 onClick={() => handleCreateEvent(undefined, 'tarefa')}
-                className="h-8 min-w-[100px] md:w-[130px] text-xs bg-gradient-to-br from-[#34495e] to-[#46627f] hover:from-[#2c3e50] hover:to-[#34495e] active:from-[#2c3e50] text-white border-0 shadow-sm whitespace-nowrap"
+                className="h-9 min-w-[110px] md:w-[140px] text-[13px] font-semibold bg-[#34495e] hover:bg-[#2c3e50] text-white border-0 rounded-[10px] shadow-sm whitespace-nowrap"
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" />
+                <Plus className="w-4 h-4 mr-2" />
                 Nova Tarefa
               </Button>
             </div>
 
             {/* View Mode Selector - Mobile: only list/day. Desktop: all 4 */}
             <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as typeof viewMode)}>
-              <TabsList className="bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 shadow-sm p-1">
+              <TabsList className="bg-[#ece9e2] dark:bg-[#10161f] border-0 shadow-none p-[3px] rounded-[11px] gap-0.5 h-auto">
                 <TabsTrigger
                   value="month"
-                  className="hidden md:flex text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="hidden md:flex text-[13px] font-semibold rounded-[7px] text-[#5a6775] dark:text-[#8a97a8] data-[state=active]:bg-[#ffffff] dark:data-[state=active]:bg-teal-300 data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm"
                 >
                   <CalendarIcon className="w-4 h-4 mr-2" />
                   Mês
                 </TabsTrigger>
                 <TabsTrigger
                   value="week"
-                  className="hidden md:flex text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="hidden md:flex text-[13px] font-semibold rounded-[7px] text-[#5a6775] dark:text-[#8a97a8] data-[state=active]:bg-[#ffffff] dark:data-[state=active]:bg-teal-300 data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm"
                 >
                   <CalendarDays className="w-4 h-4 mr-2" />
                   Kanban
                 </TabsTrigger>
                 <TabsTrigger
                   value="day"
-                  className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="text-[13px] font-semibold rounded-[7px] text-[#5a6775] dark:text-[#8a97a8] data-[state=active]:bg-[#ffffff] dark:data-[state=active]:bg-teal-300 data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm"
                 >
                   <Clock className="w-4 h-4 mr-1 md:mr-2" />
                   Dia
                 </TabsTrigger>
                 <TabsTrigger
                   value="list"
-                  className="text-sm data-[state=active]:bg-gradient-to-br data-[state=active]:from-[#89bcbe] data-[state=active]:to-[#6ba9ab] data-[state=active]:text-white data-[state=active]:shadow-sm"
+                  className="text-[13px] font-semibold rounded-[7px] text-[#5a6775] dark:text-[#8a97a8] data-[state=active]:bg-[#ffffff] dark:data-[state=active]:bg-teal-300 data-[state=active]:text-[#34495e] data-[state=active]:shadow-sm"
                 >
                   <List className="w-4 h-4 mr-1 md:mr-2" />
                   Lista
@@ -1378,6 +1379,7 @@ export default function AgendaPage() {
             </Tabs>
           </div>
         </div>
+        )}
 
         {/* Banner de filtro ativo da URL */}
         {urlFiltroAtivo && (
@@ -1443,6 +1445,9 @@ export default function AgendaPage() {
                     prev && prev.inicio === inicio && prev.fim === fim ? prev : { inicio, fim }
                   )
                 }}
+                viewMode={viewMode}
+                onViewModeChange={setViewMode}
+                onCreate={(tipo) => handleCreateEvent(undefined, tipo)}
               />
             )}
 

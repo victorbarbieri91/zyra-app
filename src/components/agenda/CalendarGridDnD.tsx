@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
-import { ChevronLeft, ChevronRight, Move, Calendar } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { ChevronLeft, ChevronRight, Move, Calendar, Users, Scale, Plus, Clock, List, LayoutGrid, Eye, EyeOff, type LucideIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { parseDBDate } from '@/lib/timezone'
 import {
@@ -18,8 +17,6 @@ import {
   subMonths,
   startOfWeek,
   endOfWeek,
-  addWeeks,
-  subWeeks,
   isWeekend,
   isBefore,
   startOfDay,
@@ -30,7 +27,7 @@ import {
 import { ptBR } from 'date-fns/locale'
 import { EventCardProps } from './EventCard'
 import AgendaFiltersCompact, { EventFiltersState } from './AgendaFiltersCompact'
-import CalendarEventMiniCard from './CalendarEventMiniCard'
+import CalendarEventMiniCard, { PRIORIDADE_COR } from './CalendarEventMiniCard'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import {
   Popover,
@@ -70,34 +67,48 @@ interface CalendarGridDnDProps {
   feriados?: Date[]
   filters?: EventFiltersState
   onFiltersChange?: (filters: EventFiltersState) => void
-  /** Emite a janela de datas visível (grade do mês / semana) para a página
+  /** Emite a janela de datas visível (grade do mês) para a página
    *  pedir ao banco só esse intervalo, evitando o teto de 1.000 linhas. */
   onVisibleRangeChange?: (start: Date, end: Date) => void
+  /** Controles da barra única do design (view Mês) */
+  viewMode?: 'month' | 'week' | 'day' | 'list'
+  onViewModeChange?: (v: 'month' | 'week' | 'day' | 'list') => void
+  onCreate?: (tipo: 'compromisso' | 'audiencia' | 'tarefa') => void
   className?: string
 }
 
-// Draggable Event Component
+// Cores dos eventos (tarefas usam PRIORIDADE_COR, importado do mini-card)
+const EVENTO_COR = { audiencia: '#a85a3e', compromisso: '#3f7376' }
+const DOW = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+// abas de visualização (centro da barra)
+const VIEW_TABS: { v: 'month' | 'week' | 'day' | 'list'; l: string; Icon: LucideIcon; show: string }[] = [
+  { v: 'month', l: 'Mês', Icon: Calendar, show: 'hidden md:inline-flex' },
+  { v: 'week', l: 'Kanban', Icon: LayoutGrid, show: 'hidden md:inline-flex' },
+  { v: 'day', l: 'Dia', Icon: Clock, show: 'inline-flex' },
+  { v: 'list', l: 'Lista', Icon: List, show: 'inline-flex' },
+]
+// botões de criar (direita da barra) — cores quentes do design
+const CREATE_BTNS: { tipo: 'compromisso' | 'audiencia' | 'tarefa'; l: string; Icon: LucideIcon; bg: string }[] = [
+  { tipo: 'compromisso', l: 'Compromisso', Icon: Users, bg: 'bg-[#3f7376] hover:bg-[#386668]' },
+  { tipo: 'audiencia', l: 'Audiência', Icon: Scale, bg: 'bg-[#a85a3e] hover:bg-[#964f37]' },
+  { tipo: 'tarefa', l: 'Nova tarefa', Icon: Plus, bg: 'bg-[#34495e] hover:bg-[#2c3e50]' },
+]
+
+// ── Item arrastável ──
 function DraggableEvent({
   evento,
-  onClick
+  onClick,
 }: {
   evento: EventCardProps
   onClick?: () => void
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: evento.id,
-    data: evento
+    data: evento,
   })
 
-  const style = transform ? {
-    transform: CSS.Transform.toString(transform),
-  } : undefined
+  const style = transform ? { transform: CSS.Transform.toString(transform) } : undefined
 
   return (
     <div
@@ -105,10 +116,7 @@ function DraggableEvent({
       style={style}
       {...attributes}
       {...listeners}
-      className={cn(
-        "cursor-grab active:cursor-grabbing",
-        isDragging && "opacity-0"
-      )}
+      className={cn('cursor-grab active:cursor-grabbing', isDragging && 'opacity-0')}
       onClick={(e) => {
         e?.stopPropagation()
         onClick?.()
@@ -118,6 +126,7 @@ function DraggableEvent({
         id={evento.id}
         titulo={evento.titulo}
         tipo={evento.tipo}
+        prioridade={evento.prioridade}
         data_inicio={evento.data_inicio}
         dia_inteiro={evento.dia_inteiro}
         status={evento.status}
@@ -128,31 +137,21 @@ function DraggableEvent({
   )
 }
 
-// Droppable Day Component
+// ── Célula do dia (zona de drop, sem borda própria — grade contínua) ──
 function DroppableDay({
   day,
-  isCurrentMonth,
-  isSelected,
-  isTodayDate,
-  isFeriadoDay,
-  isWeekendDay,
-  isWeekView,
+  className,
+  onDateSelect,
   children,
-  onDateSelect
 }: {
   day: Date
-  isCurrentMonth: boolean
-  isSelected: boolean
-  isTodayDate: boolean
-  isFeriadoDay: boolean
-  isWeekendDay: boolean
-  isWeekView?: boolean
-  children: React.ReactNode
+  className?: string
   onDateSelect?: () => void
+  children: React.ReactNode
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: format(day, 'yyyy-MM-dd'),
-    data: { date: day }
+    data: { date: day },
   })
 
   return (
@@ -160,16 +159,9 @@ function DroppableDay({
       ref={setNodeRef}
       onClick={onDateSelect}
       className={cn(
-        'p-2 rounded-lg border transition-all cursor-pointer group overflow-y-auto',
-        'hover:border-[#89bcbe] hover:shadow-sm',
-        !isWeekView && 'min-h-[110px]',
-        !isCurrentMonth && 'bg-slate-50/50 dark:bg-surface-0/50',
-        isCurrentMonth && 'bg-white dark:bg-surface-1',
-        isSelected && 'border-[#89bcbe] bg-[#f0f9f9]/30 dark:bg-teal-900/20',
-        !isSelected && 'border-slate-200 dark:border-slate-700',
-        isFeriadoDay && 'bg-purple-50/30 dark:bg-purple-500/10',
-        isWeekendDay && !isFeriadoDay && 'bg-slate-50 dark:bg-surface-0',
-        isOver && 'ring-2 ring-[#89bcbe] ring-offset-1 bg-[#f0f9f9]/50 dark:bg-teal-900/20'
+        'relative h-full flex flex-col gap-1 px-[7px] pt-[7px] pb-2 overflow-hidden cursor-pointer transition-[background-color,box-shadow]',
+        className,
+        isOver && 'ring-2 ring-inset ring-[#89bcbe] z-10',
       )}
     >
       {children}
@@ -188,22 +180,24 @@ export default function CalendarGridDnD({
   filters,
   onFiltersChange,
   onVisibleRangeChange,
+  viewMode,
+  onViewModeChange,
+  onCreate,
   className,
 }: CalendarGridDnDProps) {
   const [currentDate, setCurrentDate] = useState(selectedDate || new Date())
-  const [calendarView, setCalendarView] = useState<'month' | 'week'>('month')
-  const [isTransitioning, setIsTransitioning] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [ocultarFds, setOcultarFds] = useState(false)
+  useEffect(() => {
+    try { if (localStorage.getItem('zyra-agenda-ocultar-fds') === '1') setOcultarFds(true) } catch {}
+  }, [])
+  const toggleFds = () =>
+    setOcultarFds((v) => {
+      const nv = !v
+      try { localStorage.setItem('zyra-agenda-ocultar-fds', nv ? '1' : '0') } catch {}
+      return nv
+    })
 
-  // Transição suave entre mês e semana
-  const switchView = useCallback((newView: 'month' | 'week') => {
-    if (newView === calendarView) return
-    setIsTransitioning(true)
-    setTimeout(() => {
-      setCalendarView(newView)
-      setTimeout(() => setIsTransitioning(false), 50)
-    }, 200)
-  }, [calendarView])
   const [pendingMove, setPendingMove] = useState<{
     eventId: string
     eventData: EventCardProps
@@ -223,30 +217,23 @@ export default function CalendarGridDnD({
   const [prazoFatalCalendarOpen, setPrazoFatalCalendarOpen] = useState(false)
 
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor)
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor),
   )
 
-  // === Cálculo de dias (mês e semana) ===
+  // === Grade do mês (sempre semanas completas) ===
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)
-  const monthGridStart = startOfWeek(monthStart, { locale: ptBR })
-  const monthGridEnd = endOfWeek(monthEnd, { locale: ptBR })
-  const monthDays = eachDayOfInterval({ start: monthGridStart, end: monthGridEnd })
+  const gridStart = startOfWeek(monthStart, { locale: ptBR })
+  const gridEnd = endOfWeek(monthEnd, { locale: ptBR })
+  const days = eachDayOfInterval({ start: gridStart, end: gridEnd })
 
-  const weekStart = startOfWeek(currentDate, { locale: ptBR })
-  const weekEnd = endOfWeek(currentDate, { locale: ptBR })
-  const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd })
+  // semanas (blocos de 7)
+  const weeks: Date[][] = []
+  for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7))
+  const currentWeekIndex = weeks.findIndex((w) => w.some((d) => isToday(d)))
 
-  const days = calendarView === 'month' ? monthDays : weekDays
-  const isWeekView = calendarView === 'week'
-
-  // Informa a página a janela visível, para a leitura no banco seguir a
-  // navegação de mês/semana (em vez de puxar tudo de uma vez).
+  // Informa a página a janela visível, para a leitura no banco seguir a navegação.
   const rangeStart = days[0]
   const rangeEnd = days[days.length - 1]
   useEffect(() => {
@@ -255,29 +242,9 @@ export default function CalendarGridDnD({
   }, [rangeStart?.getTime(), rangeEnd?.getTime()])
 
   // === Navegação ===
-  const navigateBack = () => {
-    if (calendarView === 'month') {
-      setCurrentDate(subMonths(currentDate, 1))
-    } else {
-      setCurrentDate(subWeeks(currentDate, 1))
-    }
-  }
-
-  const navigateForward = () => {
-    if (calendarView === 'month') {
-      setCurrentDate(addMonths(currentDate, 1))
-    } else {
-      setCurrentDate(addWeeks(currentDate, 1))
-    }
-  }
-
-  // === Título dinâmico ===
-  const headerTitle = calendarView === 'month'
-    ? format(currentDate, 'MMMM yyyy', { locale: ptBR })
-    : `${format(weekStart, 'd', { locale: ptBR })} - ${format(weekEnd, "d 'de' MMM yyyy", { locale: ptBR })}`
-
-  // Máximo de eventos visíveis por cell
-  const maxVisibleEvents = isWeekView ? 15 : 3
+  const navigateBack = () => setCurrentDate(subMonths(currentDate, 1))
+  const navigateForward = () => setCurrentDate(addMonths(currentDate, 1))
+  const goToday = () => setCurrentDate(new Date())
 
   // Prioridade de exibição por tipo: audiência > compromisso > prazo > tarefa
   const tipoPrioridade: Record<string, number> = {
@@ -286,18 +253,11 @@ export default function CalendarGridDnD({
     prazo: 2,
     tarefa: 3,
   }
+  const prioridadeTarefa: Record<string, number> = { alta: 0, media: 1, baixa: 2 }
 
-  const prioridadeTarefa: Record<string, number> = {
-    alta: 0,
-    media: 1,
-    baixa: 2,
-  }
-
-  // Helper para verificar se item está concluído
   const isItemConcluido = (evento: EventCardProps): boolean =>
     ['concluida', 'concluido', 'realizada', 'realizado'].includes(evento.status || '')
 
-  // Helper para verificar urgência do prazo fatal
   const getUrgenciaPrazoFatal = (evento: EventCardProps): number => {
     if (evento.tipo !== 'tarefa' && evento.tipo !== 'prazo') return 99
     if (!evento.prazo_data_limite) return 99
@@ -316,36 +276,29 @@ export default function CalendarGridDnD({
     return eventos
       .filter((evento) => isSameDay(parseDBDate(evento.data_inicio), day))
       .sort((a, b) => {
-        // 1. Concluídos vão por último
         const concA = isItemConcluido(a) ? 1 : 0
         const concB = isItemConcluido(b) ? 1 : 0
         if (concA !== concB) return concA - concB
 
-        // 2. Urgência do prazo fatal (vencido/hoje primeiro)
         const urgenciaA = getUrgenciaPrazoFatal(a)
         const urgenciaB = getUrgenciaPrazoFatal(b)
         if (urgenciaA !== urgenciaB) return urgenciaA - urgenciaB
 
-        // 3. Tipo (audiência → compromisso → prazo → tarefa)
         const tipoA = tipoPrioridade[a.tipo] ?? 99
         const tipoB = tipoPrioridade[b.tipo] ?? 99
         if (tipoA !== tipoB) return tipoA - tipoB
 
-        // 4. Prioridade da tarefa (alta → média → baixa)
         const prioA = prioridadeTarefa[a.prioridade || ''] ?? 3
         const prioB = prioridadeTarefa[b.prioridade || ''] ?? 3
         if (prioA !== prioB) return prioA - prioB
 
-        // 5. Horário
         const dataA = parseDBDate(a.data_inicio)
         const dataB = parseDBDate(b.data_inicio)
         return dataA.getTime() - dataB.getTime()
       })
   }
 
-  const isFeriado = (day: Date) => {
-    return feriados.some((feriado) => isSameDay(feriado, day))
-  }
+  const isFeriado = (day: Date) => feriados.some((feriado) => isSameDay(feriado, day))
 
   const handleDragStart = (event: DragStartEvent) => {
     setActiveId(event.active.id as string)
@@ -388,7 +341,7 @@ export default function CalendarGridDnD({
               eventData: eventData,
               newDate: dropData.date,
               prazoFatal: prazoFatal,
-              distanciaOriginal: Math.max(distancia, 0)
+              distanciaOriginal: Math.max(distancia, 0),
             })
             setNovoPrazoFatalSelecionado(novoPrazoSugerido)
             setPrazoFatalWarningOpen(true)
@@ -455,7 +408,35 @@ export default function CalendarGridDnD({
     }
   }
 
-  const activeEvento = eventos.find(e => e.id === activeId)
+  const activeEvento = eventos.find((e) => e.id === activeId)
+
+  // contagens — eventos por tipo, tarefas por prioridade
+  const counts: Record<string, number> = { audiencia: 0, compromisso: 0, alta: 0, media: 0, baixa: 0 }
+  eventos.forEach((e) => {
+    if (e.tipo === 'audiencia') counts.audiencia++
+    else if (e.tipo === 'compromisso') counts.compromisso++
+    else counts[e.prioridade === 'alta' || e.prioridade === 'baixa' ? e.prioridade : 'media']++
+  })
+  const legendaEventos = [
+    { c: EVENTO_COR.audiencia, label: 'Audiências', n: counts.audiencia },
+    { c: EVENTO_COR.compromisso, label: 'Compromissos', n: counts.compromisso },
+  ]
+  const legendaTarefas = [
+    { c: PRIORIDADE_COR.alta, label: 'Alta', n: counts.alta },
+    { c: PRIORIDADE_COR.media, label: 'Média', n: counts.media },
+    { c: PRIORIDADE_COR.baixa, label: 'Baixa', n: counts.baixa },
+  ]
+
+  const navBtn =
+    'w-[30px] h-[30px] rounded-lg border border-[#e6e3da] dark:border-[#253345] text-[#2c3e50] dark:text-[#d8e2ef] inline-flex items-center justify-center hover:bg-slate-50 dark:hover:bg-[#1a212c] transition-colors'
+
+  // Ocultar fim de semana (sáb/dom): 7 → 5 colunas
+  const colStyle = { gridTemplateColumns: `repeat(${ocultarFds ? 5 : 7}, minmax(0, 1fr))` }
+  const ehFds = (d: Date) => {
+    const g = d.getDay()
+    return g === 0 || g === 6
+  }
+  const dowVisiveis = DOW.map((label, i) => ({ label, i })).filter((x) => !ocultarFds || (x.i !== 0 && x.i !== 6))
 
   return (
     <DndContext
@@ -464,218 +445,263 @@ export default function CalendarGridDnD({
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className={cn('space-y-4', className)}>
-        {/* Header do Calendário */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-semibold text-[#34495e] dark:text-slate-200 capitalize">
-              {headerTitle}
-            </h2>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={navigateBack}
-                className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
+      <div className={cn('flex flex-col gap-3', className)}>
+        {/* Barra única (design): período · visualizações · criar */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-4">
+          {/* esquerda: mês + navegação + "hoje é" */}
+          <div className="min-w-0 lg:justify-self-start">
+            <div className="flex items-center gap-3">
+              <h2
+                className="text-[28px] font-medium text-[#2c3e50] dark:text-[#edf1f7] tracking-[-0.03em] leading-none capitalize"
+                style={{ fontFamily: 'var(--font-fraunces)' }}
               >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={navigateForward}
-                className="h-8 w-8 p-0 border-slate-200 dark:border-slate-700"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+                {format(currentDate, 'MMMM', { locale: ptBR })}{' '}
+                <span className="text-[#9aa1a8] dark:text-[#5a6675] italic font-normal">
+                  {format(currentDate, 'yyyy')}
+                </span>
+              </h2>
+              <div className="flex items-center gap-1">
+                <button onClick={navigateBack} title="Mês anterior" className={navBtn}>
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={goToday} title="Ir para hoje" className={cn(navBtn, 'w-auto px-3 text-[12px] font-semibold')}>
+                  Hoje
+                </button>
+                <button onClick={navigateForward} title="Próximo mês" className={navBtn}>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
             </div>
-
-            {/* Toggle Mês / Semana */}
-            <div className="relative flex items-center bg-slate-100 dark:bg-surface-2 rounded-full p-0.5 h-8">
-              <div
-                className={cn(
-                  'absolute top-0.5 h-7 rounded-full bg-white dark:bg-surface-1 shadow-sm transition-all duration-300 ease-in-out',
-                  calendarView === 'month'
-                    ? 'left-0.5 w-[48px]'
-                    : 'left-[50px] w-[64px]'
-                )}
-              />
-              <button
-                onClick={() => switchView('month')}
-                className={cn(
-                  'relative z-10 w-[48px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
-                  calendarView === 'month' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                )}
-              >
-                Mês
-              </button>
-              <button
-                onClick={() => switchView('week')}
-                className={cn(
-                  'relative z-10 w-[64px] py-1 text-xs font-medium rounded-full transition-colors duration-200 text-center',
-                  calendarView === 'week' ? 'text-[#34495e] dark:text-slate-200' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
-                )}
-              >
-                Semana
-              </button>
+            <div className="flex items-center gap-2 mt-2.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#89bcbe] flex-shrink-0" />
+              <span className="text-[12.5px] text-[#5a6775] dark:text-[#8a97a8]">
+                Hoje é{' '}
+                <span className="font-semibold text-[#34495e] dark:text-[#d8e2ef]">
+                  {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                </span>
+              </span>
             </div>
           </div>
 
-          {/* Filtros */}
-          <div className="flex items-center gap-3">
+          {/* centro: visualizações */}
+          {viewMode && onViewModeChange && (
+            <div className="lg:justify-self-center inline-flex items-center gap-0.5 p-[3px] rounded-[11px] bg-[#ece9e2] dark:bg-[#10161f] w-fit">
+              {VIEW_TABS.map((tab) => {
+                const on = viewMode === tab.v
+                return (
+                  <button
+                    key={tab.v}
+                    onClick={() => onViewModeChange(tab.v)}
+                    className={cn(
+                      'items-center gap-2 h-9 px-3.5 rounded-[8px] text-[13px] font-semibold transition-colors',
+                      tab.show,
+                      on
+                        ? 'bg-[#ffffff] dark:bg-teal-300 text-[#34495e] shadow-sm'
+                        : 'text-[#5a6775] dark:text-[#8a97a8] hover:text-[#34495e] dark:hover:text-slate-300',
+                    )}
+                  >
+                    <tab.Icon className="w-4 h-4" />
+                    {tab.l}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          {/* direita: criar */}
+          {onCreate && (
+            <div className="lg:justify-self-end flex items-center gap-2 flex-wrap">
+              {CREATE_BTNS.map((c) => (
+                <button
+                  key={c.tipo}
+                  onClick={() => onCreate(c.tipo)}
+                  className={cn(
+                    'h-9 px-3.5 rounded-[10px] text-[13px] font-semibold text-white inline-flex items-center gap-2 shadow-sm whitespace-nowrap transition-[filter] hover:brightness-[1.06]',
+                    c.bg,
+                  )}
+                >
+                  <c.Icon className="w-4 h-4" />
+                  {c.l}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Faixa de contexto: legenda + dica | filtros */}
+        <div className="flex items-center justify-between gap-3 flex-wrap border-t border-[#e6e3da] dark:border-[#253345] pt-3">
+          <div className="flex items-center gap-x-4 gap-y-1.5 flex-wrap">
+            {legendaEventos.map((l) => (
+              <span
+                key={l.label}
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#5a6775] dark:text-[#8a97a8]"
+              >
+                <span className="w-[11px] h-[11px] rounded-[3.5px]" style={{ background: l.c }} />
+                {l.label}
+                <span className="font-mono text-[10.5px] font-bold text-[#9aa1a8] dark:text-[#5a6675]">{l.n}</span>
+              </span>
+            ))}
+            <span className="w-px h-3.5 bg-[#e6e3da] dark:bg-[#253345]" />
+            <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-[#9aa1a8] dark:text-[#5a6675]">Tarefas</span>
+            {legendaTarefas.map((l) => (
+              <span
+                key={l.label}
+                className="inline-flex items-center gap-1.5 text-[12px] font-medium text-[#5a6775] dark:text-[#8a97a8]"
+              >
+                <span className="w-[11px] h-[11px] rounded-[3.5px]" style={{ background: l.c }} />
+                {l.label}
+                <span className="font-mono text-[10.5px] font-bold text-[#9aa1a8] dark:text-[#5a6675]">{l.n}</span>
+              </span>
+            ))}
+            <span className="inline-flex items-center gap-1.5 text-[11px] text-[#9aa1a8] dark:text-[#5a6675]">
+              <Move className="w-3 h-3" />
+              Arraste para reagendar
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={toggleFds}
+              title={ocultarFds ? 'Mostrar sábado e domingo' : 'Ocultar sábado e domingo'}
+              className={cn(
+                'inline-flex items-center gap-1.5 h-8 px-3 rounded-[9px] border text-[12px] font-semibold transition-colors',
+                ocultarFds
+                  ? 'border-[#89bcbe] text-[#34495e] dark:text-[#d8e2ef] bg-[#eef6f6] dark:bg-[#89bcbe]/[0.12]'
+                  : 'border-[#e6e3da] dark:border-[#253345] text-[#5a6775] dark:text-[#8a97a8] hover:border-[#89bcbe]',
+              )}
+            >
+              {ocultarFds ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+              Sáb/Dom
+            </button>
             {filters && onFiltersChange && (
-              <AgendaFiltersCompact
-                filters={filters}
-                onFiltersChange={onFiltersChange}
-              />
+              <AgendaFiltersCompact filters={filters} onFiltersChange={onFiltersChange} />
             )}
           </div>
         </div>
 
-        {/* Grid do Calendário */}
-        <Card className="border-slate-200 dark:border-slate-700 shadow-sm">
-          <div className="p-4">
-            {/* Cabeçalho - Dias da Semana */}
-            <div className="grid grid-cols-7 gap-2 mb-2">
-              {isWeekView
-                ? weekDays.map((day) => (
-                    <div key={day.toISOString()} className="text-center py-2">
-                      <div className="text-[10px] font-medium text-[#46627f] dark:text-slate-400 uppercase">
-                        {format(day, 'EEE', { locale: ptBR })}
-                      </div>
-                      <div className={cn(
-                        'text-sm font-semibold mt-0.5',
-                        isToday(day) ? 'text-[#89bcbe]' : 'text-[#34495e] dark:text-slate-200'
-                      )}>
-                        {format(day, 'd')}
-                      </div>
-                    </div>
-                  ))
-                : ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'].map((day) => (
-                    <div
-                      key={day}
-                      className="text-center text-xs font-semibold text-[#46627f] dark:text-slate-400 py-2"
+        {/* Grade — quadro contínuo; divisórias via gap (uniformes, sem dobrar/sumir) */}
+        <div className="rounded-[14px] overflow-hidden border border-[#e6e3da] dark:border-[#253345] shadow-sm dark:shadow-none flex flex-col gap-px bg-[#e6e3da] dark:bg-[#253345]">
+          {/* dias da semana */}
+          <div className="grid gap-px bg-[#e6e3da] dark:bg-[#253345]" style={colStyle}>
+            {dowVisiveis.map(({ label, i }) => (
+              <div
+                key={label}
+                className={cn(
+                  'py-2.5 px-2 text-[10.5px] font-bold uppercase tracking-[0.08em] bg-[#faf8f2] dark:bg-[#0f141c]',
+                  i === 0 || i === 6 ? 'text-[#9aa1a8] dark:text-[#5a6675]' : 'text-[#5a6775] dark:text-[#8a97a8]',
+                )}
+              >
+                {label}
+              </div>
+            ))}
+          </div>
+
+          {/* semanas */}
+          {weeks.map((week, wi) => {
+            const isCurrentWeek = wi === currentWeekIndex
+            const max = isCurrentWeek ? 6 : 3
+            const minHeight = isCurrentWeek ? 252 : 124
+            const flexGrow = isCurrentWeek ? 1.9 : 1
+            return (
+              <div
+                key={wi}
+                className="grid gap-px bg-[#e6e3da] dark:bg-[#253345]"
+                style={{ ...colStyle, flexGrow, flexBasis: 0, minHeight }}
+              >
+                {(ocultarFds ? week.filter((d) => !ehFds(d)) : week).map((day) => {
+                  const inMonth = isSameMonth(day, currentDate)
+                  const isTodayDate = isToday(day)
+                  const isFeriadoDay = isFeriado(day)
+                  const isWeekendDay = isWeekend(day)
+                  const eventosDay = getEventosForDay(day)
+
+                  const cellBg = !inMonth
+                    ? 'bg-[#faf8f3] dark:bg-[#0e141d]'
+                    : isTodayDate
+                    ? 'bg-[#f3faf9] dark:bg-white/[0.04]'
+                    : isFeriadoDay
+                    ? 'bg-[#f7f4fa] dark:bg-[#171526]'
+                    : isWeekendDay
+                    ? 'bg-[#faf9f4] dark:bg-[#10161f]'
+                    : 'bg-white dark:bg-[#151e2b]'
+
+                  return (
+                    <DroppableDay
+                      key={format(day, 'yyyy-MM-dd')}
+                      day={day}
+                      className={cn('min-w-0', cellBg)}
+                      onDateSelect={() => onDateSelect?.(day)}
                     >
-                      {day}
-                    </div>
-                  ))
-              }
-            </div>
+                          {isTodayDate && (
+                            <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#34495e] to-[#46627f]" />
+                          )}
+                          {/* cabeçalho do dia */}
+                          <div className="flex items-center justify-between gap-1">
+                            {isTodayDate ? (
+                              <span
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[14px] font-semibold bg-gradient-to-br from-[#34495e] to-[#46627f] shadow-[0_2px_6px_-1px_rgba(52,73,94,0.5)]"
+                                style={{ fontFamily: 'var(--font-fraunces)' }}
+                              >
+                                {format(day, 'd')}
+                              </span>
+                            ) : (
+                              <span
+                                className={cn(
+                                  'font-mono text-[12px] font-medium tracking-[-0.02em]',
+                                  !inMonth || isWeekendDay
+                                    ? 'text-[#9aa1a8] dark:text-[#5a6675]'
+                                    : 'text-[#5a6775] dark:text-[#8a97a8]',
+                                  isFeriadoDay && inMonth && 'text-[#7c5cbf] dark:text-[#a890e0]',
+                                )}
+                              >
+                                {format(day, 'd')}
+                              </span>
+                            )}
+                            {eventosDay.length > 0 && (
+                              <span className="font-mono text-[9.5px] font-bold text-[#9aa1a8] dark:text-[#5a6675] bg-[#f1ede2] dark:bg-[#1d2a3c] rounded-[9px] min-w-[16px] h-4 px-[5px] inline-flex items-center justify-center">
+                                {eventosDay.length}
+                              </span>
+                            )}
+                          </div>
 
-            {/* Grid de Dias */}
-            <div className={cn(
-              'grid grid-cols-7 gap-2 min-h-[700px]',
-              'transition-[opacity,transform] duration-300 ease-in-out',
-              isWeekView && 'grid-rows-1',
-              isTransitioning ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'
-            )}>
-              {days.map((day, i) => {
-                const isCurrentMonth = isWeekView ? true : isSameMonth(day, currentDate)
-                const isSelected = selectedDate && isSameDay(day, selectedDate)
-                const isTodayDate = isToday(day)
-                const eventosDay = getEventosForDay(day)
-                const hasEventos = eventosDay.length > 0
-                const isFeriadoDay = isFeriado(day)
-                const isWeekendDay = isWeekend(day)
-
-                return (
-                  <DroppableDay
-                    key={format(day, 'yyyy-MM-dd')}
-                    day={day}
-                    isCurrentMonth={isCurrentMonth}
-                    isSelected={!!isSelected}
-                    isTodayDate={isTodayDate}
-                    isFeriadoDay={isFeriadoDay}
-                    isWeekendDay={isWeekendDay}
-                    isWeekView={isWeekView}
-                    onDateSelect={() => onDateSelect?.(day)}
-                  >
-                    {/* Cabeçalho do Dia */}
-                    <div className="flex items-center justify-between mb-2">
-                      <span
-                        className={cn(
-                          'text-xs font-medium',
-                          !isCurrentMonth && 'text-slate-400 dark:text-slate-500',
-                          isCurrentMonth && !isTodayDate && 'text-[#34495e] dark:text-slate-200',
-                          isTodayDate && 'text-white',
-                          isFeriadoDay && isCurrentMonth && !isTodayDate && 'text-purple-600 dark:text-purple-400'
-                        )}
-                      >
-                        {isTodayDate && (
-                          <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab] text-white text-xs font-bold">
-                            {format(day, 'd')}
-                          </span>
-                        )}
-                        {!isTodayDate && !isWeekView && format(day, 'd')}
-                      </span>
-
-                      {/* Indicador de quantidade de eventos */}
-                      {hasEventos && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[#89bcbe] text-white text-[10px] font-bold">
-                          {eventosDay.length}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Lista de eventos do dia com drag and drop */}
-                    <div className="space-y-1">
-                      {eventosDay.slice(0, maxVisibleEvents).map((evento) => (
-                        <DraggableEvent
-                          key={evento.id}
-                          evento={evento}
-                          onClick={() => onEventClick?.(evento)}
-                        />
-                      ))}
-                      {eventosDay.length > maxVisibleEvents && (
-                        <div className="text-center py-0.5">
-                          <span
-                            className="text-[10px] font-medium text-[#89bcbe] hover:text-[#6ba9ab] cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              onDateSelect?.(day)
-                            }}
-                          >
-                            +{eventosDay.length - maxVisibleEvents} mais
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </DroppableDay>
-                )
-              })}
-            </div>
-          </div>
-        </Card>
-
-        {/* Legenda */}
-        <div className="flex items-center gap-4 text-xs text-[#6c757d] dark:text-slate-400">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-gradient-to-br from-[#89bcbe] to-[#6ba9ab]" />
-            <span>Hoje</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-purple-50 dark:bg-purple-500/10 border border-purple-200 dark:border-purple-700" />
-            <span>Feriado</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded bg-slate-50 dark:bg-surface-0 border border-slate-200 dark:border-slate-700" />
-            <span>Fim de semana</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Move className="w-3 h-3 text-slate-400" />
-            <span>Arraste eventos para outras datas</span>
-          </div>
+                          {/* itens do dia (arrastáveis) */}
+                          <div className="flex flex-col gap-[3.5px] min-w-0">
+                            {eventosDay.slice(0, max).map((evento) => (
+                              <DraggableEvent
+                                key={evento.id}
+                                evento={evento}
+                                onClick={() => onEventClick?.(evento)}
+                              />
+                            ))}
+                            {eventosDay.length > max && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  onDateSelect?.(day)
+                                }}
+                                className="text-left text-[10.5px] font-bold text-[#89bcbe] pl-[9px] mt-px hover:underline"
+                              >
+                                +{eventosDay.length - max} mais
+                              </button>
+                            )}
+                          </div>
+                    </DroppableDay>
+                  )
+                })}
+              </div>
+            )
+          })}
         </div>
       </div>
 
       {/* Drag Overlay */}
       <DragOverlay>
         {activeId && activeEvento ? (
-          <div className="rotate-3 scale-105 shadow-2xl" style={{ cursor: 'grabbing' }}>
+          <div className="rotate-2 scale-105 shadow-2xl" style={{ cursor: 'grabbing' }}>
             <CalendarEventMiniCard
               id={activeEvento.id}
               titulo={activeEvento.titulo}
               tipo={activeEvento.tipo}
+              prioridade={activeEvento.prioridade}
               data_inicio={activeEvento.data_inicio}
               dia_inteiro={activeEvento.dia_inteiro}
               status={activeEvento.status}
@@ -701,13 +727,16 @@ export default function CalendarGridDnD({
       )}
 
       {/* Modal de Aviso - Arrasto Ultrapassa Prazo Fatal */}
-      <AlertDialog open={prazoFatalWarningOpen} onOpenChange={(open) => {
-        setPrazoFatalWarningOpen(open)
-        if (!open) {
-          setPendingMoveWithPrazo(null)
-          setNovoPrazoFatalSelecionado(null)
-        }
-      }}>
+      <AlertDialog
+        open={prazoFatalWarningOpen}
+        onOpenChange={(open) => {
+          setPrazoFatalWarningOpen(open)
+          if (!open) {
+            setPendingMoveWithPrazo(null)
+            setNovoPrazoFatalSelecionado(null)
+          }
+        }}
+      >
         <AlertDialogContent className="max-w-md p-0 overflow-hidden border-0">
           <div className="bg-white dark:bg-surface-1 rounded-lg">
             {/* Header */}
@@ -728,7 +757,6 @@ export default function CalendarGridDnD({
             </div>
 
             <div className="p-6 space-y-4">
-              {/* Info das datas */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 bg-[#f0f9f9] dark:bg-teal-900/20 rounded-lg border border-[#89bcbe]/30">
                   <p className="text-[10px] text-[#46627f] dark:text-slate-400 mb-1">Nova Data Execução</p>
@@ -744,11 +772,8 @@ export default function CalendarGridDnD({
                 </div>
               </div>
 
-              <p className="text-xs text-[#46627f] dark:text-slate-400">
-                Escolha a nova data para o prazo fatal:
-              </p>
+              <p className="text-xs text-[#46627f] dark:text-slate-400">Escolha a nova data para o prazo fatal:</p>
 
-              {/* Seletor de novo prazo fatal */}
               <Popover open={prazoFatalCalendarOpen} onOpenChange={setPrazoFatalCalendarOpen}>
                 <PopoverTrigger asChild>
                   <Button
@@ -783,7 +808,6 @@ export default function CalendarGridDnD({
               </Popover>
             </div>
 
-            {/* Footer com opções */}
             <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50">
               <div className="flex items-center gap-2">
                 <Button

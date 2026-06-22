@@ -2,8 +2,8 @@
 
 import { useState, useEffect, type ReactNode } from 'react'
 import {
-  Scale, Users, Check, Calendar, CalendarClock, CalendarDays, FileText,
-  RotateCcw, Flag, type LucideIcon,
+  Scale, Check, Calendar, CalendarClock, CalendarDays, FileText,
+  RotateCcw, type LucideIcon,
 } from 'lucide-react'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
@@ -29,10 +29,11 @@ function kindOf(item: AgendaItem): Kind {
 }
 
 // ───────────────────────── tokens (paleta quente V4) ─────────────────────────
-const PD_TIPO: Record<Kind, { label: string; Icon: LucideIcon; c: string; chip: string; chipText: string }> = {
-  audiencia:   { label: 'Audiência',   Icon: Scale, c: '#a85a3e', chip: 'bg-[#f9ebe6] dark:bg-[#a85a3e]/[0.20]', chipText: 'text-[#a85a3e] dark:text-[#e0a085]' },
-  compromisso: { label: 'Compromisso', Icon: Users, c: '#3f7376', chip: 'bg-[#e8f5f5] dark:bg-[#3f7376]/[0.20]', chipText: 'text-[#3f7376] dark:text-[#7fb8ba]' },
-  tarefa:      { label: 'Tarefa',      Icon: Check, c: '#415a7e', chip: 'bg-[#edf1f7] dark:bg-[#415a7e]/[0.20]', chipText: 'text-[#415a7e] dark:text-[#9bb3d4]' },
+// badge sólido na cor dos botões de criar (Compromisso #3f7376 · Audiência #a85a3e · Tarefa #34495e)
+const PD_TIPO: Record<Kind, { label: string; node: string; badge: string }> = {
+  audiencia:   { label: 'Audiência',   node: '#a85a3e', badge: '#a85a3e' },
+  compromisso: { label: 'Compromisso', node: '#3f7376', badge: '#3f7376' },
+  tarefa:      { label: 'Tarefa',      node: '#415a7e', badge: '#34495e' },
 }
 // cor do nó por prioridade (tarefas) — paleta quente, igual ao Painel do Dia
 const PRIOR_COR: Record<string, string> = { alta: '#a85a3e', media: '#8a6438', baixa: '#3f7376' }
@@ -162,7 +163,7 @@ export default function AgendaTimelineRow({
   const hora = !isTask && !item.dia_inteiro ? formatBrazilTime(ini) : null
 
   // cor do nó: prioridade (tarefa) / tipo (evento)
-  const nodeColor = done ? '#c2bdb1' : isTask ? (PRIOR_COR[item.prioridade || 'media'] || '#9aa1a8') : tipo.c
+  const nodeColor = done ? '#c2bdb1' : isTask ? (PRIOR_COR[item.prioridade || 'media'] || '#9aa1a8') : tipo.node
 
   const concluir = () => { setOtimista('done'); onComplete?.() }
   const reabrir = () => { setOtimista('open'); onReopen?.() }
@@ -235,7 +236,12 @@ export default function AgendaTimelineRow({
               {isTask && <Check_ done={done} onClick={done ? reabrir : concluir} />}
               <div className="flex-1 min-w-0 flex flex-col gap-1">
                 <div className="flex items-center gap-2 min-w-0">
-                  <Chip Icon={tipo.Icon} className={cn(tipo.chip, tipo.chipText, 'flex-shrink-0')}>{tipo.label}</Chip>
+                  <span
+                    className="inline-flex items-center h-[21px] px-2 rounded-md text-[10.5px] font-bold text-white whitespace-nowrap flex-shrink-0"
+                    style={{ backgroundColor: tipo.badge }}
+                  >
+                    {tipo.label}
+                  </span>
                   <span className={tituloCls}>{item.titulo}</span>
                 </div>
                 {(vinculo || item.caso_titulo) && (
@@ -251,13 +257,13 @@ export default function AgendaTimelineRow({
             {/* cluster direito: prazo · resp · | · ações */}
             <div className="flex items-center gap-3 flex-wrap justify-end lg:flex-shrink-0 pl-[30px] lg:pl-0">
               {prazo && (
-                <Chip Icon={Flag} className={cn(
+                <Chip className={cn(
                   'h-[22px]',
                   prazo.tone === 'danger' && 'text-[#a85a3e] bg-[#f9ebe6] dark:bg-[#a85a3e]/[0.16]',
                   prazo.tone === 'warning' && 'text-[#8a6438] bg-[#f7f0e7] dark:bg-[#8a6438]/[0.16]',
                   prazo.tone === 'calm' && 'text-[#5a6775] dark:text-[#8a97a8] bg-[#f1ede2] dark:bg-[#1d2a3c]',
                 )}>
-                  Prazo fatal {prazo.data}
+                  Prazo Fatal: {prazo.data}
                 </Chip>
               )}
               <Resp nomes={item.todos_responsaveis || item.responsavel_nome || ''} />

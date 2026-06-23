@@ -1,45 +1,40 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import {
   Clock,
-  Timer,
   Loader2,
   Search,
   FileText,
   Briefcase,
   X,
-  DollarSign,
-  Ban,
-  Info,
+  Check,
   CheckCircle2,
+  ChevronUp,
+  ChevronDown,
+  ChevronRight,
+  Calendar,
+  Info,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useAtosHora, AtoHoraConfig, HorasAcumuladasInfo } from '@/hooks/useAtosHora'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
-import { formatDateForDB, formatBrazilDate } from '@/lib/timezone'
+import { formatBrazilDate } from '@/lib/timezone'
 import { useTimesheetEntry } from '@/hooks/useTimesheetEntry'
 import { useQueryClient } from '@tanstack/react-query'
 import { AtoHoraProgress } from './AtoHoraProgress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import {
   type FormaCobranca,
   parseFormasPagamento,
   contratoCobraHoras,
-  contratoTemForma,
   formaPrincipal,
   FORMA_COBRANCA_LABELS,
 } from '@/lib/contratos/formas'
@@ -98,9 +93,80 @@ interface ContratoInfo {
   titulo?: string
 }
 
+// Item da lista de vínculos (busca e recentes) — formato unificado
+interface VinculoItem {
+  id: string
+  chip: string
+  titulo: string
+  sub?: string
+}
+
 // Formata data para input HTML type="date" (YYYY-MM-DD)
 const formatDateForInput = (date: Date = new Date()): string => {
   return formatBrazilDate(date, 'yyyy-MM-dd')
+}
+
+// YYYY-MM-DD → Date local (sem deslocamento de timezone)
+const parseInputDate = (iso: string): Date => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y || 2000, (m || 1) - 1, d || 1)
+}
+
+// ── tokens de superfície (paleta quente V4, consistente com o resto da Agenda) ──
+const SURFACE = 'bg-white dark:bg-[#151e2b]'
+const FIELD = 'bg-white dark:bg-[#10161f] border border-[#e6e3da] dark:border-[#37455f]'
+const LABEL = 'text-[10.5px] font-bold uppercase tracking-[0.08em] text-[#9aa1a8] dark:text-[#808fa1]'
+
+// número grande editável (mono) com setas evidentes
+function TimeStepper({
+  value, max, label, step = 1, onChange, onStep,
+}: { value: number; max: number; label: string; step?: number; onChange: (n: number) => void; onStep: (d: number) => void }) {
+  const [v, setV] = useState(String(value).padStart(2, '0'))
+  const [foc, setFoc] = useState(false)
+  useEffect(() => { if (!foc) setV(String(value).padStart(2, '0')) }, [value, foc])
+  const stepCls = 'w-[84px] h-8 rounded-[9px] flex items-center justify-center transition-colors border border-[#e6e3da] dark:border-[#37455f] bg-white dark:bg-[#10161f] text-[#5a6775] dark:text-[#9fadbf] hover:border-[#89bcbe] hover:text-[#3f7376] dark:hover:text-[#9fc7c9]'
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <button type="button" onClick={() => onStep(step)} className={stepCls}><ChevronUp className="w-[18px] h-[18px]" /></button>
+      <input
+        value={v}
+        inputMode="numeric"
+        onFocus={(e) => { setFoc(true); e.target.select() }}
+        onChange={(e) => setV(e.target.value.replace(/\D/g, '').slice(-2))}
+        onBlur={() => { let n = parseInt(v || '0', 10); if (isNaN(n)) n = 0; n = Math.max(0, Math.min(max, n)); onChange(n); setV(String(n).padStart(2, '0')); setFoc(false) }}
+        className={cn(
+          'w-[84px] h-14 text-center text-[40px] font-semibold font-mono tracking-[-0.01em] rounded-[10px] outline-none tabular-nums text-[#1a2330] dark:text-[#e8ecf2] border-[1.5px]',
+          foc ? 'border-[#89bcbe] bg-white dark:bg-[#10161f]' : 'border-transparent bg-transparent',
+        )}
+      />
+      <button type="button" onClick={() => onStep(-step)} className={stepCls}><ChevronDown className="w-[18px] h-[18px]" /></button>
+      <span className={cn(LABEL, 'tracking-[0.1em] text-[10px]')}>{label}</span>
+    </div>
+  )
+}
+
+// linha de vínculo (busca / recentes)
+function VinculoRow({ chip, titulo, sub, selected, onClick }: VinculoItem & { selected?: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2.5 text-left transition-colors group',
+        selected ? 'bg-[#eef7f7] dark:bg-[#89bcbe]/[0.12]' : 'hover:bg-[#f7f6f2] dark:hover:bg-[#1c2433]',
+      )}
+    >
+      <span className={cn(
+        'flex-shrink-0 h-[22px] px-2 rounded-md inline-flex items-center text-[11px] font-bold font-mono whitespace-nowrap max-w-[120px] truncate',
+        selected ? 'bg-[#dcefef] text-[#3f7376] dark:bg-[#89bcbe]/[0.2] dark:text-[#9fc7c9]' : 'bg-[#eef1f0] text-[#5a6775] dark:bg-[#232f42] dark:text-[#9fadbf]',
+      )}>{chip}</span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[12.5px] font-semibold text-[#1a2330] dark:text-[#e8ecf2] truncate">{titulo}</span>
+        {sub && <span className="block text-[10.5px] text-[#9aa1a8] dark:text-[#808fa1] truncate">{sub}</span>}
+      </span>
+      <ChevronRight className={cn('w-[15px] h-[15px] flex-shrink-0 transition-colors', selected ? 'text-[#89bcbe]' : 'text-transparent group-hover:text-[#89bcbe]')} />
+    </button>
+  )
 }
 
 export default function TimesheetModal({
@@ -131,14 +197,11 @@ export default function TimesheetModal({
 
   // Form state
   const [dataTrabalho, setDataTrabalho] = useState(formatDateForInput())
-  const [horaInicio, setHoraInicio] = useState('09:00')
-  const [horaFim, setHoraFim] = useState('10:00')
   const [atividade, setAtividade] = useState('')
   const [faturavel, setFaturavel] = useState<boolean | null>(null) // null = usar padrão do contrato
   const [faturavelManual, setFaturavelManual] = useState(false) // Indica se usuário sobrescreveu
 
-  // Modo de registro: duração (horas diretas) ou horário (início/fim)
-  const [modoRegistro, setModoRegistro] = useState<'horario' | 'duracao'>('duracao')
+  // Tempo registrado — só duração (horas:min)
   const [duracaoHoras, setDuracaoHoras] = useState(1)
   const [duracaoMinutos, setDuracaoMinutos] = useState(0)
 
@@ -156,6 +219,10 @@ export default function TimesheetModal({
   const [consultas, setConsultas] = useState<ConsultaOption[]>([])
   const [searchLoading, setSearchLoading] = useState(false)
 
+  // Recentes (vínculos + atividades recentes do usuário, derivados do timesheet)
+  const [recentes, setRecentes] = useState<{ processo: VinculoItem[]; consulta: VinculoItem[] }>({ processo: [], consulta: [] })
+  const [atividadesRecentes, setAtividadesRecentes] = useState<string[]>([])
+
   // Submit state
   const [loading, setLoading] = useState(false)
 
@@ -171,48 +238,25 @@ export default function TimesheetModal({
   // Hook para atos hora
   const { getAtosConfiguradosHora, getHorasAcumuladas } = useAtosHora()
 
-  // Calcular horas - retorna formato legível (1h54min)
-  const calcularHorasDisplay = useCallback(() => {
-    const [hi, mi] = horaInicio.split(':').map(Number)
-    const [hf, mf] = horaFim.split(':').map(Number)
-    const totalMinutos = (hf * 60 + mf) - (hi * 60 + mi)
+  // Total em minutos / decimal (só duração)
+  const totalMin = duracaoHoras * 60 + duracaoMinutos
+  const calcularHorasDecimalUnificado = useCallback(
+    () => Math.max(0, duracaoHoras + duracaoMinutos / 60),
+    [duracaoHoras, duracaoMinutos],
+  )
+  const horasDisplay = `${Math.floor(totalMin / 60)}h${String(totalMin % 60).padStart(2, '0')}`
 
-    if (totalMinutos <= 0) return '0min'
-
-    const horas = Math.floor(totalMinutos / 60)
-    const minutos = totalMinutos % 60
-
-    if (horas === 0) return `${minutos}min`
-    if (minutos === 0) return `${horas}h`
-    return `${horas}h${minutos}min`
-  }, [horaInicio, horaFim])
-
-  // Calcular horas em decimal (para cálculos)
-  const calcularHorasDecimal = useCallback(() => {
-    const [hi, mi] = horaInicio.split(':').map(Number)
-    const [hf, mf] = horaFim.split(':').map(Number)
-    const totalMinutos = (hf * 60 + mf) - (hi * 60 + mi)
-    return Math.max(0, totalMinutos / 60)
-  }, [horaInicio, horaFim])
-
-  // Calcular horas em decimal - unificado para ambos os modos
-  const calcularHorasDecimalUnificado = useCallback(() => {
-    if (modoRegistro === 'duracao') {
-      return Math.max(0, duracaoHoras + duracaoMinutos / 60)
-    }
-    return calcularHorasDecimal()
-  }, [modoRegistro, duracaoHoras, duracaoMinutos, calcularHorasDecimal])
-
-  // Display de horas - unificado para ambos os modos
-  const calcularHorasDisplayUnificado = useCallback(() => {
-    if (modoRegistro === 'duracao') {
-      if (duracaoHoras === 0 && duracaoMinutos === 0) return '0min'
-      if (duracaoHoras === 0) return `${duracaoMinutos}min`
-      if (duracaoMinutos === 0) return `${duracaoHoras}h`
-      return `${duracaoHoras}h${duracaoMinutos}min`
-    }
-    return calcularHorasDisplay()
-  }, [modoRegistro, duracaoHoras, duracaoMinutos, calcularHorasDisplay])
+  // Steppers
+  const incH = (d: number) => setDuracaoHoras((x) => Math.max(0, Math.min(23, x + d)))
+  const incM = (d: number) => {
+    let nm = duracaoMinutos + d
+    let nh = duracaoHoras
+    if (nm > 59) { nm -= 60; nh += 1 }
+    if (nm < 0) { nm += 60; nh -= 1 }
+    if (nh < 0) { nh = 0; nm = 0 }
+    setDuracaoHoras(Math.min(23, nh))
+    setDuracaoMinutos(nm)
+  }
 
   // Calcular faturável padrão baseado no array canônico de formas do contrato.
   // Espelha a lógica de calcular_faturavel_timesheet no banco — usa o helper
@@ -225,26 +269,16 @@ export default function TimesheetModal({
   // Valor efetivo de faturável (manual ou padrão)
   const faturavelEfetivo = faturavel !== null ? faturavel : faturavelPadrao()
 
-  // Reset form quando abrir
+  // Reset form quando abrir — só duração
   useEffect(() => {
     if (open) {
       // Data de trabalho: usar default se disponível (modo edição), senão hoje
       setDataTrabalho(defaultDataTrabalho || formatDateForInput())
 
-      // Modo horário: pré-preencher se tiver hora_inicio/fim (modo edição)
-      if (defaultHoraInicio && defaultHoraFim) {
-        setModoRegistro('horario')
-        setHoraInicio(defaultHoraInicio)
-        setHoraFim(defaultHoraFim)
-        setDuracaoHoras(defaultDuracaoHoras ?? 1)
-        setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
-      } else {
-        setHoraInicio('09:00')
-        setHoraFim('10:00')
-        setModoRegistro(defaultModoRegistro || 'duracao')
-        setDuracaoHoras(defaultDuracaoHoras ?? 1)
-        setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
-      }
+      // Sempre duração: pré-preenche a partir dos defaults (call sites de edição
+      // já mandam defaultDuracaoHoras/Minutos calculados a partir de `horas`).
+      setDuracaoHoras(defaultDuracaoHoras ?? 1)
+      setDuracaoMinutos(defaultDuracaoMinutos ?? 0)
 
       setAtividade(defaultAtividade || '')
 
@@ -276,7 +310,55 @@ export default function TimesheetModal({
         loadConsultaById(consultaId).finally(() => setLoadingVinculo(false))
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, processoId, consultaId, defaultModoRegistro, defaultDuracaoHoras, defaultDuracaoMinutos, defaultAtividade, defaultDataTrabalho, defaultHoraInicio, defaultHoraFim, defaultFaturavel])
+
+  // Carregar "Recentes" (vínculos + atividades recentes do usuário)
+  useEffect(() => {
+    if (!open || !escritorioAtivo) return
+    let cancelled = false
+    ;(async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data } = await supabase
+        .from('v_timesheet_aprovacao')
+        .select('processo_id, numero_processo, processo_pasta, processo_titulo, consulta_id, consulta_titulo, cliente_nome, atividade, created_at')
+        .eq('escritorio_id', escritorioAtivo)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(60)
+      if (cancelled || !data) return
+      const procMap = new Map<string, VinculoItem>()
+      const consMap = new Map<string, VinculoItem>()
+      const ativs: string[] = []
+      for (const r of data as any[]) {
+        if (r.processo_id && !procMap.has(r.processo_id)) {
+          procMap.set(r.processo_id, {
+            id: r.processo_id,
+            chip: r.processo_pasta || r.numero_processo || 'Processo',
+            titulo: r.processo_titulo || r.cliente_nome || r.numero_processo || '—',
+            sub: r.cliente_nome || undefined,
+          })
+        }
+        if (r.consulta_id && !consMap.has(r.consulta_id)) {
+          consMap.set(r.consulta_id, {
+            id: r.consulta_id,
+            chip: 'Consulta',
+            titulo: r.consulta_titulo || r.cliente_nome || '—',
+            sub: r.cliente_nome || undefined,
+          })
+        }
+        const a = (r.atividade || '').trim()
+        if (a && !ativs.includes(a)) ativs.push(a)
+      }
+      setRecentes({
+        processo: Array.from(procMap.values()).slice(0, 5),
+        consulta: Array.from(consMap.values()).slice(0, 5),
+      })
+      setAtividadesRecentes(ativs.slice(0, 5))
+    })()
+    return () => { cancelled = true }
+  }, [open, escritorioAtivo, supabase])
 
   // Carregar atos hora quando contrato é por_ato
   useEffect(() => {
@@ -406,6 +488,7 @@ export default function TimesheetModal({
       contrato_id: processoData.contrato_id,
       forma_cobranca: contrato?.forma_cobranca,
     })
+    setConsultaSelecionada(null)
 
     // Definir info do contrato
     setContratoInfo(contrato)
@@ -457,6 +540,7 @@ export default function TimesheetModal({
       contrato_id: consultaData.contrato_id,
       forma_cobranca: contrato?.forma_cobranca,
     })
+    setProcessoSelecionado(null)
 
     // Definir info do contrato
     setContratoInfo(contrato)
@@ -637,7 +721,7 @@ export default function TimesheetModal({
     return () => clearTimeout(debounce)
   }, [searchTerm, vinculoTipo, escritorioAtivo, supabase])
 
-  // Selecionar processo
+  // Selecionar processo (resultado de busca — já traz contrato_id)
   const handleSelectProcesso = async (processo: ProcessoOption) => {
     setProcessoSelecionado(processo)
     setConsultaSelecionada(null)
@@ -656,7 +740,7 @@ export default function TimesheetModal({
     }
   }
 
-  // Selecionar consulta
+  // Selecionar consulta (resultado de busca — já traz contrato_id)
   const handleSelectConsulta = async (consulta: ConsultaOption) => {
     setConsultaSelecionada(consulta)
     setProcessoSelecionado(null)
@@ -675,6 +759,22 @@ export default function TimesheetModal({
     }
   }
 
+  // Selecionar item de "Recentes" (não traz contrato_id — carrega tudo por ID)
+  const handleSelectRecente = async (id: string) => {
+    setSearchTerm('')
+    setFaturavel(null)
+    setFaturavelManual(false)
+    setAtoSelecionado(null)
+    setHorasAcumuladasAto(null)
+    setLoadingVinculo(true)
+    try {
+      if (vinculoTipo === 'processo') await loadProcessoById(id)
+      else await loadConsultaById(id)
+    } finally {
+      setLoadingVinculo(false)
+    }
+  }
+
   // Limpar seleção
   const handleClearSelection = () => {
     setProcessoSelecionado(null)
@@ -687,10 +787,18 @@ export default function TimesheetModal({
     setHorasAcumuladasAto(null)
   }
 
-  // Definir faturável manualmente
-  const handleSetFaturavel = (value: boolean) => {
-    setFaturavel(value)
-    setFaturavelManual(true)
+  // Override de faturável (checkbox no card de contrato). Marcado = inverte o
+  // padrão do contrato neste lançamento; desmarcado = volta ao padrão.
+  const padraoCobravel = faturavelPadrao()
+  const overrideMarcado = faturavelManual && faturavel !== null && faturavel !== padraoCobravel
+  const toggleOverride = () => {
+    if (overrideMarcado) {
+      setFaturavel(null)
+      setFaturavelManual(false)
+    } else {
+      setFaturavel(!padraoCobravel)
+      setFaturavelManual(true)
+    }
   }
 
   // Submit - andComplete=true salva horas E marca entidade como concluída
@@ -707,18 +815,10 @@ export default function TimesheetModal({
       return
     }
 
-    // Validação de horário/duração conforme modo
-    if (modoRegistro === 'horario') {
-      if (horaFim <= horaInicio) {
-        toast.error('Hora fim deve ser maior que hora início')
-        return
-      }
-    } else {
-      const totalMin = duracaoHoras * 60 + duracaoMinutos
-      if (totalMin <= 0) {
-        toast.error('Informe a duração do trabalho')
-        return
-      }
+    // Validação de duração
+    if (totalMin <= 0) {
+      toast.error('Informe a duração do trabalho')
+      return
     }
 
     if (!atividade.trim()) {
@@ -736,18 +836,14 @@ export default function TimesheetModal({
     try {
       // Modo edição: atualizar registro existente
       if (isEditMode && editTimesheetId) {
-        const horasDecimal = modoRegistro === 'duracao'
-          ? calcularHorasDecimalUnificado()
-          : calcularHorasDecimal()
-
         await editarTimesheet(editTimesheetId, {
-          horas: horasDecimal,
+          horas: calcularHorasDecimalUnificado(),
           atividade: atividade.trim(),
           faturavel: faturavelEfetivo,
           faturavel_manual: faturavelManual,
           data_trabalho: dataTrabalho,
-          hora_inicio: modoRegistro === 'horario' ? horaInicio : null,
-          hora_fim: modoRegistro === 'horario' ? horaFim : null,
+          hora_inicio: null,
+          hora_fim: null,
           processo_id: processoSelecionado?.id || null,
           consulta_id: consultaSelecionada?.id || null,
           ato_tipo_id: atoSelecionado || null,
@@ -768,13 +864,13 @@ export default function TimesheetModal({
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Usuário não autenticado')
 
-      const { data, error } = await supabase.rpc('registrar_tempo_retroativo', {
+      const { error } = await supabase.rpc('registrar_tempo_retroativo', {
         p_escritorio_id: escritorioAtivo,
         p_user_id: user.id,
         p_data_trabalho: dataTrabalho,
-        p_hora_inicio: modoRegistro === 'horario' ? horaInicio : null,
-        p_hora_fim: modoRegistro === 'horario' ? horaFim : null,
-        p_horas: modoRegistro === 'duracao' ? calcularHorasDecimalUnificado() : null,
+        p_hora_inicio: null,
+        p_hora_fim: null,
+        p_horas: calcularHorasDecimalUnificado(),
         p_atividade: atividade.trim(),
         p_processo_id: processoSelecionado?.id || null,
         p_consulta_id: consultaSelecionada?.id || null,
@@ -812,543 +908,372 @@ export default function TimesheetModal({
     }
   }
 
-  const hasSelection = processoSelecionado || consultaSelecionada
-  const opcoes = vinculoTipo === 'processo' ? processos : consultas
+  const hasSelection = !!(processoSelecionado || consultaSelecionada)
+  const vinculoFixo = !!(processoId || consultaId)
+  const submitDisabled = loading || !hasSelection || !atividade.trim() || totalMin <= 0
+
+  // Lista da coluna de vínculo: busca (≥2 chars) ou recentes
+  const buscando = searchTerm.length >= 2
+  const itensBusca: VinculoItem[] = vinculoTipo === 'processo'
+    ? processos.map((p) => ({ id: p.id, chip: p.numero_pasta || 'Proc.', titulo: p.cliente_nome || p.numero_cnj, sub: p.numero_cnj }))
+    : consultas.map((c) => ({ id: c.id, chip: c.numero || 'Cons.', titulo: c.titulo, sub: c.cliente_nome }))
+  const itensRecentes = vinculoTipo === 'processo' ? recentes.processo : recentes.consulta
+  const baseList = buscando ? itensBusca : itensRecentes
+
+  const dataObj = parseInputDate(dataTrabalho)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-[#34495e] dark:text-slate-200">
-            <Clock className="w-5 h-5 text-[#89bcbe]" />
-            {isEditMode ? 'Editar Lançamento' : 'Lançar Horas'}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          {/* Vínculo selecionado - Card minimalista com mais info */}
-          {loadingVinculo ? (
-            <div className="rounded-lg border border-slate-200 dark:border-slate-700 px-4 py-3 flex items-center gap-3">
-              <Loader2 className="w-4 h-4 animate-spin text-[#89bcbe]" />
-              <span className="text-xs text-slate-500 dark:text-slate-400">Carregando vínculo...</span>
+      <DialogContent
+        className={cn(
+          'sm:max-w-[980px] p-0 gap-0 overflow-hidden border border-[#e6e3da] dark:border-[#2e3a52] rounded-[22px] dark:dark-dialog-glow [&>button]:hidden flex flex-col max-h-[90vh]',
+          SURFACE,
+        )}
+      >
+        {/* HEADER */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-[#f0ede3] dark:border-[#253345] flex-shrink-0">
+          <div className="flex-1 min-w-0">
+            <DialogTitle asChild>
+              <h2 className="text-[18px] font-semibold text-[#1a2330] dark:text-[#e8ecf2] tracking-[-0.01em]" style={{ fontFamily: 'var(--font-fraunces)' }}>
+                {isEditMode ? 'Editar lançamento' : 'Registrar horas'}
+              </h2>
+            </DialogTitle>
+            <div className="text-[12px] text-[#5a6775] dark:text-[#9fadbf] mt-0.5 capitalize">
+              {format(dataObj, "EEE',' d 'de' MMMM", { locale: ptBR })}
             </div>
-          ) : hasSelection ? (
-            <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-              {/* Header com tipo e ação de remover */}
-              <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-surface-2 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex items-center gap-1.5">
-                  {processoSelecionado ? (
-                    <>
-                      <FileText className="w-3 h-3 text-[#34495e] dark:text-slate-200" />
-                      <span className="text-[10px] font-medium text-[#34495e] dark:text-slate-200 uppercase tracking-wide">Processo</span>
-                    </>
-                  ) : (
-                    <>
-                      <Briefcase className="w-3 h-3 text-[#34495e] dark:text-slate-200" />
-                      <span className="text-[10px] font-medium text-[#34495e] dark:text-slate-200 uppercase tracking-wide">Consulta</span>
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {/* Renderiza um badge por forma configurada — contratos híbridos
-                      mostram todas as formas em vez de apenas a principal. */}
-                  {contratoInfo?.formas_cobranca.map((forma) => {
-                    const cobraHoras = contratoCobraHoras([forma], contratoInfo.horas_faturaveis)
-                    return (
-                      <Badge
-                        key={forma}
-                        variant="outline"
-                        className={cn(
-                          "text-[9px] px-1.5 py-0 h-4 border",
-                          cobraHoras
-                            ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200"
-                            : "bg-slate-50 dark:bg-surface-0 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                        )}
-                      >
-                        {FORMA_COBRANCA_LABELS[forma]}
-                      </Badge>
-                    )
-                  })}
-                  {!processoId && !consultaId && (
-                    <button
-                      type="button"
-                      className="p-0.5 rounded hover:bg-slate-200 text-slate-400 hover:text-slate-600 dark:text-slate-400 transition-colors"
-                      onClick={handleClearSelection}
-                    >
-                      <X className="w-3 h-3" />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-              {/* Conteúdo principal */}
-              <div className="px-3 py-2 bg-white dark:bg-surface-1">
-                {processoSelecionado ? (
-                  <div className="space-y-1">
-                    {/* Número da pasta + CNJ */}
-                    <div className="flex items-baseline gap-2">
-                      {processoSelecionado.numero_pasta && (
-                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
-                          {processoSelecionado.numero_pasta}
-                        </span>
-                      )}
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                        {processoSelecionado.numero_cnj}
-                      </span>
-                    </div>
-                    {/* Cliente */}
-                    {processoSelecionado.cliente_nome && (
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
-                        {processoSelecionado.cliente_nome}
-                      </p>
-                    )}
-                  </div>
-                ) : consultaSelecionada && (
-                  <div className="space-y-1">
-                    {/* Número + Título */}
-                    <div className="flex items-baseline gap-2">
-                      {consultaSelecionada.numero && (
-                        <span className="text-xs font-semibold text-[#34495e] dark:text-slate-200">
-                          {consultaSelecionada.numero}
-                        </span>
-                      )}
-                      <span className="text-[11px] text-slate-700 dark:text-slate-300 truncate">
-                        {consultaSelecionada.titulo}
-                      </span>
-                    </div>
-                    {/* Cliente */}
-                    {consultaSelecionada.cliente_nome && (
-                      <p className="text-[11px] text-slate-600 dark:text-slate-400 truncate">
-                        {consultaSelecionada.cliente_nome}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Alerta se não tem contrato */}
-              {!contratoInfo && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-500/10 border-t border-amber-100">
-                  <Info className="w-3 h-3 text-amber-500 shrink-0" />
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400">
-                    Sem contrato vinculado
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            /* Busca de vínculo */
-            <div>
-              <Label className="text-xs text-slate-600 dark:text-slate-400">Vincular a</Label>
-
-              {/* Toggle Processo/Consulta */}
-              <div className="flex gap-2 mt-1.5 mb-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVinculoTipo('processo')
-                    setSearchTerm('')
-                  }}
-                  className={cn(
-                    "flex-1 px-3 py-1.5 text-xs rounded-lg border transition-colors",
-                    vinculoTipo === 'processo'
-                      ? "border-[#34495e] bg-[#34495e] text-white"
-                      : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
-                  )}
-                >
-                  <FileText className="w-3 h-3 inline mr-1" />
-                  Processo
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setVinculoTipo('consulta')
-                    setSearchTerm('')
-                  }}
-                  className={cn(
-                    "flex-1 px-3 py-1.5 text-xs rounded-lg border transition-colors",
-                    vinculoTipo === 'consulta'
-                      ? "border-[#34495e] bg-[#34495e] text-white"
-                      : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
-                  )}
-                >
-                  <Briefcase className="w-3 h-3 inline mr-1" />
-                  Consulta
-                </button>
-              </div>
-
-              {/* Campo de busca */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
-                <Input
-                  placeholder={vinculoTipo === 'processo'
-                    ? "Buscar por CNJ, pasta, cliente ou parte contrária..."
-                    : "Buscar por número, título ou cliente..."}
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-9 pl-8 text-sm"
-                />
-
-                {/* Dropdown de resultados */}
-                {searchTerm.length >= 2 && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-surface-1 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg z-50 max-h-48 overflow-y-auto">
-                    {searchLoading ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                      </div>
-                    ) : opcoes.length > 0 ? (
-                      <>
-                        {vinculoTipo === 'processo' ? (
-                          processos.map((processo) => (
-                            <button
-                              key={processo.id}
-                              type="button"
-                              onClick={() => handleSelectProcesso(processo)}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 text-left border-b border-slate-100 dark:border-slate-800 last:border-b-0"
-                            >
-                              <FileText className="w-4 h-4 text-slate-400 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
-                                  {processo.numero_pasta ? `${processo.numero_pasta} - ` : ''}{processo.numero_cnj}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                  {processo.cliente_nome && (
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                                      {processo.cliente_nome}
-                                    </span>
-                                  )}
-                                  {processo.forma_cobranca && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                                      {FORMA_COBRANCA_LABELS[processo.forma_cobranca as FormaCobranca] || processo.forma_cobranca}
-                                    </Badge>
-                                  )}
-                                  {!processo.contrato_id && (
-                                    <span className="text-[9px] text-amber-600 dark:text-amber-400">Sem contrato</span>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-                          ))
-                        ) : (
-                          consultas.map((consulta) => (
-                            <button
-                              key={consulta.id}
-                              type="button"
-                              onClick={() => handleSelectConsulta(consulta)}
-                              className="w-full flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 text-left border-b border-slate-100 dark:border-slate-800 last:border-b-0"
-                            >
-                              <Briefcase className="w-4 h-4 text-slate-400 shrink-0" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-[#34495e] dark:text-slate-200 truncate">
-                                  {consulta.numero ? `${consulta.numero} - ` : ''}{consulta.titulo}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                  {consulta.cliente_nome && (
-                                    <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
-                                      {consulta.cliente_nome}
-                                    </span>
-                                  )}
-                                  {consulta.forma_cobranca && (
-                                    <Badge variant="outline" className="text-[9px] px-1 py-0 h-3.5">
-                                      {FORMA_COBRANCA_LABELS[consulta.forma_cobranca as FormaCobranca] || consulta.forma_cobranca}
-                                    </Badge>
-                                  )}
-                                  {!consulta.contrato_id && (
-                                    <span className="text-[9px] text-amber-600 dark:text-amber-400">Sem contrato</span>
-                                  )}
-                                </div>
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </>
-                    ) : (
-                      <div className="py-4 text-center text-sm text-slate-500 dark:text-slate-400">
-                        Nenhum resultado encontrado
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Seleção de Ato - aparece apenas para contratos por_ato com atos em modo hora */}
-          {hasSelection && atosHora.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs text-slate-600 dark:text-slate-400">Qual ato você está trabalhando? *</Label>
-              <Select
-                value={atoSelecionado || ''}
-                onValueChange={(value) => setAtoSelecionado(value)}
-                disabled={atosLoading}
-              >
-                <SelectTrigger className="h-9">
-                  <SelectValue placeholder={atosLoading ? 'Carregando...' : 'Selecione o ato...'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {atosHora.map((ato) => (
-                    <SelectItem key={ato.ato_tipo_id} value={ato.ato_tipo_id}>
-                      <div className="flex items-center gap-2">
-                        <span>{ato.ato_nome}</span>
-                        <span className="text-[10px] text-slate-400">
-                          (R${ato.valor_hora?.toFixed(2)}/h)
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {/* Indicador de progresso do ato selecionado */}
-              {atoSelecionado && horasAcumuladasAto && (
-                <AtoHoraProgress
-                  horasUsadas={horasAcumuladasAto.horas_totais}
-                  horasMinimas={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.horas_minimas}
-                  horasMaximas={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.horas_maximas}
-                  valorHora={atosHora.find(a => a.ato_tipo_id === atoSelecionado)?.valor_hora}
-                  horasNovas={calcularHorasDecimalUnificado()}
-                />
-              )}
-            </div>
-          )}
-
-          {/* Toggle Modo de Registro */}
-          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setModoRegistro('duracao')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
-                modoRegistro === 'duracao'
-                  ? "bg-[#f0f9f9] dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200 font-medium border-r border-slate-200 dark:border-slate-700"
-                  : "bg-white dark:bg-surface-1 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0 border-r border-slate-200 dark:border-slate-700"
-              )}
-            >
-              <Timer className="w-3 h-3" />
-              Duração
-            </button>
-            <button
-              type="button"
-              onClick={() => setModoRegistro('horario')}
-              className={cn(
-                "flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs transition-colors",
-                modoRegistro === 'horario'
-                  ? "bg-[#f0f9f9] dark:bg-teal-900/20 text-[#34495e] dark:text-slate-200 font-medium"
-                  : "bg-white dark:bg-surface-1 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
-              )}
-            >
-              <Clock className="w-3 h-3" />
-              Horário
-            </button>
           </div>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            aria-label="Fechar"
+            className="w-8 h-8 rounded-[9px] flex items-center justify-center flex-shrink-0 text-[#9aa1a8] dark:text-[#808fa1] hover:bg-[#ece9e2] dark:hover:bg-[#313f57] transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
 
-          {/* Data */}
-          <div className={cn("grid gap-3", modoRegistro === 'horario' ? "grid-cols-3" : "grid-cols-1")}>
-            <div>
-              <Label className="text-xs text-slate-600 dark:text-slate-400">Data</Label>
-              <Input
-                type="date"
-                value={dataTrabalho}
-                onChange={(e) => setDataTrabalho(e.target.value)}
-                max={formatDateForInput()}
-                className="h-9 mt-1 text-sm"
-              />
-            </div>
-            {modoRegistro === 'horario' && (
+        {/* BODY — 2 colunas (horizontal) */}
+        <div className="flex-1 min-h-0 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row">
+
+          {/* COLUNA ESQUERDA — escolher o vínculo */}
+          <div className="md:w-[340px] flex-shrink-0 flex flex-col md:min-h-0 gap-3 p-4 border-b md:border-b-0 md:border-r border-[#f0ede3] dark:border-[#253345] bg-[#fbfaf7] dark:bg-[#10161f]">
+            {loadingVinculo ? (
+              <div className={cn('rounded-[12px] px-4 py-3 flex items-center gap-3', FIELD)}>
+                <Loader2 className="w-4 h-4 animate-spin text-[#89bcbe]" />
+                <span className="text-xs text-[#5a6775] dark:text-[#9fadbf]">Carregando vínculo…</span>
+              </div>
+            ) : hasSelection ? (
               <>
-                <div>
-                  <Label className="text-xs text-slate-600 dark:text-slate-400">Início</Label>
-                  <Input
-                    type="time"
-                    value={horaInicio}
-                    onChange={(e) => setHoraInicio(e.target.value)}
-                    className="h-9 mt-1 text-sm"
-                  />
+                <div className="flex items-center justify-between gap-2">
+                  <span className={LABEL}>Vinculado a</span>
+                  {!vinculoFixo && (
+                    <button type="button" onClick={handleClearSelection} className="text-[11px] font-medium text-[#9aa1a8] hover:text-[#5a6775] dark:hover:text-[#9fadbf] transition-colors">Trocar</button>
+                  )}
                 </div>
-                <div>
-                  <Label className="text-xs text-slate-600 dark:text-slate-400">Fim</Label>
-                  <Input
-                    type="time"
-                    value={horaFim}
-                    onChange={(e) => setHoraFim(e.target.value)}
-                    className="h-9 mt-1 text-sm"
+                <div className="rounded-[13px] border border-[#dcebeb] dark:border-[#33455f] bg-white dark:bg-[#141b27] overflow-hidden flex-shrink-0">
+                  <div className="flex items-start gap-3 px-4 py-3">
+                    <div className="w-9 h-9 rounded-[10px] flex-shrink-0 flex items-center justify-center bg-[#e8f5f5] dark:bg-[#89bcbe]/[0.16] text-[#3f7376] dark:text-[#9fc7c9]">
+                      {processoSelecionado ? <FileText className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      {processoSelecionado ? (
+                        <>
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            {processoSelecionado.numero_pasta && (
+                              <span className="text-[13px] font-semibold text-[#1a2330] dark:text-[#e8ecf2]">{processoSelecionado.numero_pasta}</span>
+                            )}
+                            <span className="text-[11.5px] font-mono text-[#5a6775] dark:text-[#9fadbf]">{processoSelecionado.numero_cnj}</span>
+                          </div>
+                          {processoSelecionado.cliente_nome && (
+                            <div className="text-[11.5px] text-[#5a6775] dark:text-[#808fa1] truncate mt-0.5">{processoSelecionado.cliente_nome}</div>
+                          )}
+                        </>
+                      ) : consultaSelecionada && (
+                        <>
+                          <div className="flex items-baseline gap-2 flex-wrap">
+                            {consultaSelecionada.numero && (
+                              <span className="text-[13px] font-semibold text-[#1a2330] dark:text-[#e8ecf2]">{consultaSelecionada.numero}</span>
+                            )}
+                            <span className="text-[12px] text-[#2c3e50] dark:text-[#d8e2ef] truncate">{consultaSelecionada.titulo}</span>
+                          </div>
+                          {consultaSelecionada.cliente_nome && (
+                            <div className="text-[11.5px] text-[#5a6775] dark:text-[#808fa1] truncate mt-0.5">{consultaSelecionada.cliente_nome}</div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  {!contratoInfo && (
+                    <div className="flex items-center gap-1.5 px-4 py-2 bg-[#f8f0e6] dark:bg-[#8a6438]/[0.16] border-t border-[#ecdcc4] dark:border-[#8a6438]/[0.3]">
+                      <Info className="w-3 h-3 text-[#8a6438] dark:text-[#d6a87a] flex-shrink-0" />
+                      <span className="text-[10.5px] text-[#8a6438] dark:text-[#d6a87a]">Sem contrato — não é possível lançar horas</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Últimas atividades — até 5, caixa com altura limitada */}
+                {atividadesRecentes.length > 0 && (
+                  <div className="mt-1 min-w-0">
+                    <span className={cn(LABEL, 'mb-2 block')}>Últimas atividades</span>
+                    <div className="rounded-[13px] border border-[#f0ede3] dark:border-[#2c3a52] bg-white dark:bg-[#0c1119] overflow-hidden max-h-[228px] overflow-y-auto">
+                      {atividadesRecentes.map((a, i) => (
+                        <button
+                          key={a}
+                          type="button"
+                          onClick={() => setAtividade(a.slice(0, 280))}
+                          className={cn(
+                            'w-full text-left px-3 py-2.5 text-[12.5px] leading-snug transition-colors',
+                            i > 0 && 'border-t border-[#f0ede3] dark:border-[#2c3a52]',
+                            atividade === a
+                              ? 'bg-[#eef7f7] dark:bg-[#89bcbe]/[0.12] text-[#3f7376] dark:text-[#9fc7c9] font-medium'
+                              : 'text-[#5a6775] dark:text-[#9fadbf] hover:bg-[#f7f6f2] dark:hover:bg-[#1c2433]',
+                          )}
+                        >
+                          <span className="line-clamp-2">{a}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                <div className="flex items-center justify-between gap-2">
+                  <span className={LABEL}>Vincular a</span>
+                  <div className="inline-flex gap-0.5 p-[3px] rounded-[10px] bg-[#f1ede2] dark:bg-[#141b27] border border-[#f0ede3] dark:border-[#2c3a52]">
+                    {([['processo', 'Processo'], ['consulta', 'Consultivo']] as const).map(([v, l]) => {
+                      const on = vinculoTipo === v
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          onClick={() => setVinculoTipo(v)}
+                          className={cn(
+                            'h-7 px-3 rounded-[7px] text-[12px] font-semibold transition-colors',
+                            on ? 'bg-white dark:bg-[#2a3850] text-[#34495e] dark:text-[#e8eef6] shadow-sm' : 'text-[#5a6775] dark:text-[#9fadbf]',
+                          )}
+                        >{l}</button>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className={cn('flex items-center gap-2.5 h-11 px-3.5 rounded-[12px] flex-shrink-0', FIELD)}>
+                  <Search className="w-4 h-4 text-[#9aa1a8] dark:text-[#808fa1] flex-shrink-0" />
+                  <input
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder={vinculoTipo === 'processo' ? 'Buscar por CNJ, pasta ou cliente…' : 'Buscar por número, título ou cliente…'}
+                    className="flex-1 bg-transparent border-none outline-none text-[13px] text-[#2c3e50] dark:text-[#e8ecf2] placeholder:text-[#aab0b8] dark:placeholder:text-[#5a6675]"
                   />
+                  {searchLoading && <Loader2 className="w-4 h-4 animate-spin text-[#9aa1a8]" />}
+                </div>
+
+                {/* lista (recentes até 5, ou resultados) — caixa com altura limitada */}
+                <div className="flex flex-col rounded-[13px] border border-[#f0ede3] dark:border-[#2c3a52] bg-white dark:bg-[#0c1119] overflow-hidden">
+                  <div className={cn(LABEL, 'px-3 pt-2.5 pb-1')}>{buscando ? 'Resultados' : 'Recentes'}</div>
+                  <div className="max-h-[300px] overflow-y-auto">
+                    {searchLoading && buscando ? (
+                      <div className="flex items-center justify-center py-6"><Loader2 className="w-4 h-4 animate-spin text-[#9aa1a8]" /></div>
+                    ) : baseList.length > 0 ? (
+                      baseList.map((it, i) => (
+                        <div key={it.id}>
+                          {i > 0 && <div className="h-px bg-[#f0ede3] dark:bg-[#2c3a52] mx-3" />}
+                          <VinculoRow
+                            {...it}
+                            onClick={() => {
+                              if (buscando) {
+                                if (vinculoTipo === 'processo') {
+                                  const p = processos.find((x) => x.id === it.id)
+                                  if (p) handleSelectProcesso(p)
+                                } else {
+                                  const c = consultas.find((x) => x.id === it.id)
+                                  if (c) handleSelectConsulta(c)
+                                }
+                              } else {
+                                handleSelectRecente(it.id)
+                              }
+                            }}
+                          />
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-5 text-[12px] text-[#9aa1a8] dark:text-[#808fa1]">
+                        {buscando ? `Nenhum resultado para "${searchTerm}"` : 'Nenhum lançamento recente'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </>
             )}
           </div>
 
-          {/* Duração - Stepper compacto */}
-          {modoRegistro === 'duracao' && (
-            <div className="flex items-center justify-center gap-3 py-2.5 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDuracaoHoras(Math.max(0, duracaoHoras - 1))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
-                >
-                  <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
-                </button>
-                <span className="text-base font-semibold text-[#34495e] dark:text-slate-200 w-7 text-center tabular-nums">{duracaoHoras}</span>
-                <span className="text-[11px] text-slate-400 -ml-0.5">h</span>
-                <button
-                  type="button"
-                  onClick={() => setDuracaoHoras(Math.min(23, duracaoHoras + 1))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
-                >
-                  <span className="relative" style={{ top: '-0.5px' }}>+</span>
-                </button>
+          {/* COLUNA DIREITA — preencher o lançamento */}
+          <div className="flex-1 min-w-0 md:min-h-0 md:overflow-y-auto p-5 flex flex-col gap-4">
+            {/* TEMPO + DATA + CONTRATO */}
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-start">
+              <div className="flex-shrink-0">
+                <div className={cn(LABEL, 'mb-2')}>Tempo registrado</div>
+                <div className={cn('relative rounded-[16px] overflow-hidden px-4 py-4', FIELD)}>
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: 'radial-gradient(120% 140% at 100% 100%, rgba(137,188,190,0.18), transparent 55%)' }}
+                  />
+                  <div className="relative flex items-center justify-center gap-4">
+                    <TimeStepper value={duracaoHoras} max={23} label="Horas" onChange={setDuracaoHoras} onStep={incH} />
+                    <span className="font-mono text-[30px] font-bold text-[#9aa1a8] dark:text-[#808fa1] mb-[18px] leading-none">:</span>
+                    <TimeStepper value={duracaoMinutos} max={59} label="Min" step={5} onChange={setDuracaoMinutos} onStep={incM} />
+                  </div>
+                </div>
               </div>
 
-              <span className="text-slate-300 text-sm">:</span>
+              <div className="flex-1 min-w-0 flex flex-col gap-3">
+                <div>
+                  <div className={cn(LABEL, 'mb-2')}>Data</div>
+                  <div className={cn('relative flex items-center gap-2.5 h-11 px-3.5 rounded-[12px]', FIELD)}>
+                    <Calendar className="w-4 h-4 text-[#9aa1a8] dark:text-[#808fa1] flex-shrink-0" />
+                    <span className="text-[13.5px] font-semibold font-mono text-[#1a2330] dark:text-[#e8ecf2]">{format(dataObj, 'dd/MM/yyyy')}</span>
+                    <span className="text-[12.5px] text-[#9aa1a8] dark:text-[#808fa1] ml-auto capitalize">{format(dataObj, 'EEEE', { locale: ptBR })}</span>
+                    <input
+                      type="date"
+                      value={dataTrabalho}
+                      max={formatDateForInput()}
+                      onChange={(e) => e.target.value && setDataTrabalho(e.target.value)}
+                      className="absolute inset-0 opacity-0 cursor-pointer"
+                    />
+                  </div>
+                </div>
 
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setDuracaoMinutos(Math.max(0, duracaoMinutos - 5))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
-                >
-                  <span className="relative" style={{ top: '-1px' }}>&#8722;</span>
-                </button>
-                <span className="text-base font-semibold text-[#34495e] dark:text-slate-200 w-7 text-center tabular-nums">{String(duracaoMinutos).padStart(2, '0')}</span>
-                <span className="text-[11px] text-slate-400 -ml-0.5">min</span>
-                <button
-                  type="button"
-                  onClick={() => setDuracaoMinutos(Math.min(55, duracaoMinutos + 5))}
-                  className="w-5 h-5 inline-flex items-center justify-center rounded-full border border-slate-300 text-slate-400 hover:border-[#89bcbe] hover:text-[#34495e] dark:text-slate-200 transition-colors leading-none"
-                >
-                  <span className="relative" style={{ top: '-0.5px' }}>+</span>
-                </button>
+                {/* CONTRATO VINCULADO */}
+                {contratoInfo && (
+                  <div>
+                    <div className={cn(LABEL, 'mb-2')}>Contrato vinculado</div>
+                    <div className="rounded-[13px] border border-[#dcebeb] dark:border-[#33455f] bg-white dark:bg-[#141b27] overflow-hidden">
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <div className="w-9 h-9 rounded-[9px] flex-shrink-0 flex items-center justify-center bg-[#e8f5f5] dark:bg-[#89bcbe]/[0.16] text-[#3f7376] dark:text-[#9fc7c9]">
+                          <FileText className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[12.5px] font-semibold text-[#1a2330] dark:text-[#e8ecf2] truncate">{contratoInfo.titulo || 'Contrato de honorários'}</div>
+                          <div className="text-[11px] text-[#9aa1a8] dark:text-[#808fa1] truncate mt-0.5">
+                            {contratoInfo.formas_cobranca.map((f) => FORMA_COBRANCA_LABELS[f]).join(' · ')}
+                          </div>
+                        </div>
+                        <span className={cn(
+                          'inline-flex items-center gap-1 h-5 px-2.5 rounded-full text-[10px] font-bold flex-shrink-0',
+                          faturavelEfetivo ? 'bg-[#e0f2f2] text-[#2f6063] dark:bg-[#3f7376]/[0.22] dark:text-[#8fd0d2]' : 'bg-[#f3ece0] text-[#8a6438] dark:bg-[#8a6438]/[0.2] dark:text-[#d6a87a]',
+                        )}>
+                          {faturavelEfetivo && <Check className="w-[11px] h-[11px]" />}
+                          {faturavelEfetivo ? 'Cobrável' : 'Não cobrável'}
+                        </span>
+                      </div>
+                    </div>
+                    <label className="flex items-center gap-2.5 mt-2.5 cursor-pointer select-none" onClick={toggleOverride}>
+                      <span className={cn(
+                        'w-[18px] h-[18px] rounded-[5px] flex-shrink-0 flex items-center justify-center transition-all border-[1.5px]',
+                        overrideMarcado ? 'bg-[#89bcbe] border-[#89bcbe] dark:bg-[#7fb8ba] dark:border-[#7fb8ba]' : 'border-[#e6e3da] dark:border-[#37455f]',
+                      )}>
+                        {overrideMarcado && <Check className="w-3 h-3 text-white dark:text-[#0b1016]" strokeWidth={3} />}
+                      </span>
+                      <span className="text-[12.5px] text-[#5a6775] dark:text-[#9fadbf]">
+                        {padraoCobravel ? (
+                          <>Marcar como <strong className="text-[#2c3e50] dark:text-[#e8ecf2] font-semibold">não cobrável</strong> só neste lançamento</>
+                        ) : (
+                          <>Marcar como <strong className="text-[#2c3e50] dark:text-[#e8ecf2] font-semibold">cobrável</strong> só neste lançamento</>
+                        )}
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
             </div>
-          )}
 
-          {/* Total de horas - apenas no modo horário */}
-          {modoRegistro === 'horario' && (
-            <div className="flex items-center justify-center gap-2 py-2 bg-slate-50 dark:bg-surface-0 rounded-lg border border-slate-200 dark:border-slate-700">
-              <Clock className="w-4 h-4 text-[#89bcbe]" />
-              <span className="text-sm text-slate-600 dark:text-slate-400">
-                Total: <strong className="text-[#34495e] dark:text-slate-200">{calcularHorasDisplayUnificado()}</strong>
-              </span>
-            </div>
-          )}
-
-          {/* Atividade */}
-          <div>
-            <Label className="text-xs text-slate-600 dark:text-slate-400">Atividade realizada *</Label>
-            <Textarea
-              value={atividade}
-              onChange={(e) => setAtividade(e.target.value)}
-              rows={2}
-              className="mt-1 text-sm resize-none"
-              placeholder="Descreva a atividade..."
-            />
-          </div>
-
-          {/* Faturável - Botões */}
-          <div>
-            <Label className="text-xs text-slate-600 dark:text-slate-400 mb-2 block">Tipo de hora</Label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => handleSetFaturavel(true)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all",
-                  faturavelEfetivo
-                    ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                    : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
+            {/* ATO (contratos por_ato com modo hora) */}
+            {hasSelection && atosHora.length > 0 && (
+              <div>
+                <div className={cn(LABEL, 'mb-2')}>Qual ato você está trabalhando? *</div>
+                <Select value={atoSelecionado || ''} onValueChange={(value) => setAtoSelecionado(value)} disabled={atosLoading}>
+                  <SelectTrigger className="h-10 rounded-[12px]">
+                    <SelectValue placeholder={atosLoading ? 'Carregando…' : 'Selecione o ato…'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {atosHora.map((ato) => (
+                      <SelectItem key={ato.ato_tipo_id} value={ato.ato_tipo_id}>
+                        <div className="flex items-center gap-2">
+                          <span>{ato.ato_nome}</span>
+                          <span className="text-[10px] text-slate-400">(R${ato.valor_hora?.toFixed(2)}/h)</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {atoSelecionado && horasAcumuladasAto && (
+                  <div className="mt-2">
+                    <AtoHoraProgress
+                      horasUsadas={horasAcumuladasAto.horas_totais}
+                      horasMinimas={atosHora.find((a) => a.ato_tipo_id === atoSelecionado)?.horas_minimas}
+                      horasMaximas={atosHora.find((a) => a.ato_tipo_id === atoSelecionado)?.horas_maximas}
+                      valorHora={atosHora.find((a) => a.ato_tipo_id === atoSelecionado)?.valor_hora}
+                      horasNovas={calcularHorasDecimalUnificado()}
+                    />
+                  </div>
                 )}
-              >
-                <DollarSign className="w-4 h-4" />
-                <span className="text-sm font-medium">Cobrável</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetFaturavel(false)}
-                className={cn(
-                  "flex-1 flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg border transition-all",
-                  !faturavelEfetivo
-                    ? "border-slate-500 bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-300"
-                    : "border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
-                )}
-              >
-                <Ban className="w-4 h-4" />
-                <span className="text-sm font-medium">Não Cobrável</span>
-              </button>
-            </div>
-
-            {/* Info sobre faturável - apenas quando automático */}
-            {contratoInfo && !faturavelManual && (
-              <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1">
-                <Info className="w-3 h-3" />
-                Padrão do contrato ({FORMA_COBRANCA_LABELS[contratoInfo.forma_cobranca]})
-              </p>
+              </div>
             )}
+
+            {/* ATIVIDADE */}
+            <div>
+              <div className="flex items-center justify-between mb-2 min-h-[20px]">
+                <span className={LABEL}>Atividade realizada <span className="text-[#c2785a]">*</span></span>
+                <span className={cn('text-[11px] font-mono', atividade.length >= 280 ? 'text-[#c2785a]' : 'text-[#9aa1a8] dark:text-[#808fa1]')}>{atividade.length}/280</span>
+              </div>
+              <Textarea
+                value={atividade}
+                onChange={(e) => setAtividade(e.target.value.slice(0, 280))}
+                rows={4}
+                className={cn('text-[13px] leading-relaxed resize-none rounded-[12px]', FIELD)}
+                placeholder="Descreva o que foi feito — ex: revisão da minuta, leitura de parecer, reunião com cliente…"
+              />
+            </div>
           </div>
         </div>
 
-        {/* Botões */}
-        <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-200 dark:border-slate-700">
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+        {/* FOOTER */}
+        <div className="flex items-center justify-end gap-2.5 px-6 py-3.5 border-t border-[#f0ede3] dark:border-[#253345] bg-[#faf9f5] dark:bg-white/[0.018] flex-shrink-0">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading} className="h-10 rounded-[11px]">
             Cancelar
           </Button>
 
           {!isEditMode && onSaveAndComplete && (tarefaId || audienciaId || eventoId) ? (
             <>
-              {/* Modo com duas opções: Salvar (continuar) e Salvar e Concluir */}
               <Button
                 onClick={() => handleSubmit(false)}
-                disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
+                disabled={submitDisabled}
                 variant="outline"
-                className="border-[#34495e] text-[#34495e] dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface-2 dark:bg-surface-0"
+                className="h-10 rounded-[11px] border-[#34495e] text-[#34495e] dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface-2"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <Clock className="w-4 h-4 mr-2" />
-                    Salvar
-                  </>
-                )}
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Clock className="w-4 h-4 mr-2" />}
+                Salvar
               </Button>
               <Button
                 onClick={() => handleSubmit(true)}
-                disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                disabled={submitDisabled}
+                className="h-10 rounded-[11px] bg-emerald-600 hover:bg-emerald-700 text-white"
               >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4 mr-2" />
-                    Salvar e Concluir
-                  </>
-                )}
+                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
+                Salvar e concluir
               </Button>
             </>
           ) : (
-            /* Modo padrão: Registrar Horas ou Salvar (edição) */
             <Button
               onClick={() => handleSubmit(false)}
-              disabled={loading || !hasSelection || !atividade.trim() || calcularHorasDecimalUnificado() <= 0}
-              className="bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
+              disabled={submitDisabled}
+              className="h-10 rounded-[11px] bg-gradient-to-r from-[#34495e] to-[#46627f] hover:from-[#46627f] hover:to-[#34495e] text-white"
             >
               {loading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Salvando…</>
               ) : (
-                <>
-                  <Clock className="w-4 h-4 mr-2" />
-                  {isEditMode ? 'Salvar Alterações' : 'Registrar Horas'}
-                </>
+                <><Check className="w-4 h-4 mr-2" />{isEditMode ? 'Salvar alterações' : `Registrar ${horasDisplay}`}</>
               )}
             </Button>
           )}

@@ -24,6 +24,8 @@ export interface TimesheetEntryRecente {
   editado: boolean
   hora_inicio: string | null
   hora_fim: string | null
+  user_id: string | null
+  colaborador_nome: string | null
 }
 
 // 'semana': últimos 7 dias rolling.
@@ -51,7 +53,7 @@ async function fetchTimesheetRecentes(
 
   const { data, error } = await supabase
     .from('v_timesheet_aprovacao')
-    .select('id, data_trabalho, horas, atividade, faturavel, faturado, status, processo_id, processo_titulo, consulta_id, consulta_titulo, tarefa_id, cliente_nome, editado, hora_inicio, hora_fim')
+    .select('id, data_trabalho, horas, atividade, faturavel, faturado, status, processo_id, processo_titulo, consulta_id, consulta_titulo, tarefa_id, cliente_nome, editado, hora_inicio, hora_fim, user_id, colaborador_nome')
     .in('escritorio_id', escritoriosIds)
     .eq('user_id', user.id)
     .gte('data_trabalho', inicioPeriodoISO(periodo))
@@ -69,7 +71,7 @@ async function fetchTimesheetPorTarefa(
 ): Promise<TimesheetEntryRecente[]> {
   const { data, error } = await supabase
     .from('v_timesheet_aprovacao')
-    .select('id, data_trabalho, horas, atividade, faturavel, faturado, status, processo_id, processo_titulo, consulta_id, consulta_titulo, tarefa_id, cliente_nome, editado, hora_inicio, hora_fim')
+    .select('id, data_trabalho, horas, atividade, faturavel, faturado, status, processo_id, processo_titulo, consulta_id, consulta_titulo, tarefa_id, cliente_nome, editado, hora_inicio, hora_fim, user_id, colaborador_nome')
     .eq('tarefa_id', tarefaId)
     .order('data_trabalho', { ascending: false })
     .order('created_at', { ascending: false })

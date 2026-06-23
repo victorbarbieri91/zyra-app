@@ -15,7 +15,6 @@ import {
   Check,
   RotateCcw,
   Calendar,
-  AlertCircle,
   Clock,
   CalendarDays,
   Timer,
@@ -23,14 +22,23 @@ import {
   PlayCircle,
   PauseCircle,
   Lock,
+  FileText,
+  Scale,
+  Users,
+  Flag,
+  Info,
+  ChevronRight,
+  X,
+  type LucideIcon,
 } from 'lucide-react'
 import { cn, formatHoras } from '@/lib/utils'
 import { formatBrazilDate, formatDateTimeForDB, parseDBDate, toBrazilTime } from '@/lib/timezone'
 import { Tarefa } from '@/hooks/useTarefas'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAgendaResponsaveis, Responsavel } from '@/hooks/useAgendaResponsaveis'
-import { addDays, nextMonday, differenceInDays, differenceInHours, startOfDay, isAfter } from 'date-fns'
+import { addDays, nextMonday, differenceInDays, differenceInHours, startOfDay, isAfter, format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,7 +53,7 @@ import { useTimer } from '@/contexts/TimerContext'
 import { useTimesheetPorTarefa, type TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
 import TimesheetListModal from '@/components/agenda/TimesheetListModal'
 import TimesheetModal from '@/components/financeiro/TimesheetModal'
-import { getTipoLabel as getTipoLabelFromConfig, getTipoCategoria } from '@/lib/constants/tarefa-tipos'
+import { getTipoLabel as getTipoLabelFromConfig } from '@/lib/constants/tarefa-tipos'
 
 // Extracted outside parent to prevent re-mount on every render (causes dropdown flicker)
 function DateRescheduleButton({
@@ -67,27 +75,13 @@ function DateRescheduleButton({
   handleUpdateDate: (field: 'data_inicio' | 'prazo_data_limite', date: Date) => Promise<void>
   getUrgency: (date: string) => number
 }) {
-  const handleQuickOption = async (option: 'today' | 'tomorrow' | 'nextMonday' | 'plus7') => {
-    const today = new Date()
-    let newDate: Date
-
-    switch(option) {
-      case 'today':
-        newDate = today
-        break
-      case 'tomorrow':
-        newDate = addDays(today, 1)
-        break
-      case 'nextMonday':
-        newDate = nextMonday(today)
-        break
-      case 'plus7':
-        newDate = addDays(today, 7)
-        break
-    }
-
-    await handleUpdateDate(field, newDate)
-  }
+  const hoje = new Date()
+  const opcoes: { label: string; date: Date }[] = [
+    { label: 'Hoje', date: hoje },
+    { label: 'Amanhã', date: addDays(hoje, 1) },
+    { label: 'Próxima segunda', date: nextMonday(hoje) },
+    { label: 'Daqui a 7 dias', date: addDays(hoje, 7) },
+  ]
 
   const handleOpenCustomDate = () => {
     setDateDropdownOpen(null)
@@ -98,7 +92,7 @@ function DateRescheduleButton({
 
   const hoursRemaining = getUrgency(currentDate)
   const isOverdue = hoursRemaining < 0
-  const isUrgent = hoursRemaining >= 0 && hoursRemaining <= 48
+  const isUrgent = hoursRemaining >= 0 && hoursRemaining <= 72 // calmo: só acende em ≤3 dias
 
   return (
     <DropdownMenu
@@ -108,43 +102,137 @@ function DateRescheduleButton({
       <DropdownMenuTrigger asChild>
         <button
           className={cn(
-            "inline-flex items-center gap-1 text-xs transition-all h-5",
-            "cursor-pointer rounded-sm px-1.5",
-            "bg-slate-50 dark:bg-surface-0 hover:bg-slate-100 dark:hover:bg-surface-3 border border-slate-200 dark:border-slate-700",
-            isOverdue && "text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20",
-            isUrgent && !isOverdue && "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/30 hover:bg-amber-100 dark:hover:bg-amber-500/20",
-            !isOverdue && !isUrgent && "text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100"
+            "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[12.5px] transition-colors cursor-pointer border",
+            isOverdue && "text-[#a8442c] dark:text-[#e0a085] bg-[#fbece5] dark:bg-[#a8442c]/[0.16] border-[#f0d4c8] dark:border-[#a8442c]/[0.3] hover:bg-[#f6dccf] dark:hover:bg-[#a8442c]/[0.24]",
+            isUrgent && !isOverdue && "text-[#8a6438] dark:text-[#d6a87a] bg-[#f8f0e6] dark:bg-[#8a6438]/[0.16] border-[#ecdcc4] dark:border-[#8a6438]/[0.3] hover:bg-[#f0e4d2] dark:hover:bg-[#8a6438]/[0.24]",
+            !isOverdue && !isUrgent && "text-[#2c3e50] dark:text-[#d8e2ef] bg-[#f7f5f0] dark:bg-[#1b2536] border-[#e6e3da] dark:border-[#253345] hover:bg-[#efece4] dark:hover:bg-[#222d3f]"
           )}
           disabled={updatingDate}
         >
-          <span className="font-medium">
+          <span className="font-mono font-semibold">
             {formatBrazilDate(parseDBDate(currentDate))}
           </span>
-          <Calendar className="w-3 h-3 ml-0.5 opacity-50" />
+          <Calendar className="w-3.5 h-3.5 opacity-60" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-44">
-        <div className="px-2 py-1.5 text-[10px] font-medium text-slate-500 dark:text-slate-400">
-          Reagendar para:
-        </div>
-        <DropdownMenuItem onClick={() => handleQuickOption('today')} className="text-xs">
-          Hoje
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleQuickOption('tomorrow')} className="text-xs">
-          Amanhã
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleQuickOption('nextMonday')} className="text-xs">
-          Próxima segunda
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => handleQuickOption('plus7')} className="text-xs">
-          Daqui a 7 dias
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleOpenCustomDate} className="text-xs">
-          Data personalizada...
+      <DropdownMenuContent
+        align="end"
+        sideOffset={6}
+        className="w-56 p-1.5 rounded-xl border border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] shadow-[0_16px_38px_-16px_rgba(15,23,42,0.4)]"
+      >
+        <div className="px-2 pt-1 pb-1.5 text-[10px] font-bold uppercase tracking-[0.09em] text-[#9aa1a8] dark:text-[#5a6675]">Reagendar para</div>
+        {opcoes.map((o) => (
+          <DropdownMenuItem
+            key={o.label}
+            onClick={() => handleUpdateDate(field, o.date)}
+            className="rounded-lg px-2 py-1.5 cursor-pointer flex items-center justify-between gap-4 text-[12.5px] font-medium text-[#2c3e50] dark:text-[#d8e2ef] focus:bg-[#f4f1e8] dark:focus:bg-[#1d2a3c] focus:text-[#2c3e50] dark:focus:text-[#edf1f7]"
+          >
+            <span>{o.label}</span>
+            <span className="text-[11px] font-mono text-[#9aa1a8] dark:text-[#5a6675] capitalize">{format(o.date, 'EEEEEE dd/MM', { locale: ptBR })}</span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator className="my-1 bg-[#f0ede3] dark:bg-[#253345]" />
+        <DropdownMenuItem
+          onClick={handleOpenCustomDate}
+          className="rounded-lg px-2 py-1.5 cursor-pointer flex items-center gap-2 text-[12.5px] font-medium text-[#3f7376] dark:text-[#9fc7c9] focus:bg-[#e8f5f5] dark:focus:bg-[#89bcbe]/[0.16]"
+        >
+          <CalendarDays className="w-3.5 h-3.5" />Escolher outra data…
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  )
+}
+
+// ───────────────────────── átomos V4 ─────────────────────────
+const AVATAR_CORES = ['#34495e', '#46627f', '#3f7376', '#6b9e84', '#8a6438', '#a85a3e', '#415a7e']
+function avatarCor(seed: string) {
+  let h = 0
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0
+  return AVATAR_CORES[h % AVATAR_CORES.length]
+}
+function iniciaisNome(nome: string) {
+  const p = nome.trim().split(/\s+/)
+  if (p.length === 1) return p[0].slice(0, 2).toUpperCase()
+  return (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+
+const PRIOR_PILL: Record<string, string> = {
+  alta: 'text-[#a8442c] bg-[#fbece5] dark:text-[#e0a085] dark:bg-[#a8442c]/[0.2]',
+  urgente: 'text-[#a8442c] bg-[#fbece5] dark:text-[#e0a085] dark:bg-[#a8442c]/[0.2]',
+  media: 'text-[#8a6438] bg-[#f8f0e6] dark:text-[#d6a87a] dark:bg-[#8a6438]/[0.2]',
+  normal: 'text-[#415a7e] bg-[#edf1f7] dark:text-[#9bb3d4] dark:bg-[#46627f]/[0.2]',
+  baixa: 'text-[#3f7376] bg-[#e8f5f5] dark:text-[#7fb8ba] dark:bg-[#3f7376]/[0.2]',
+}
+const PRIOR_DOT: Record<string, string> = {
+  alta: 'bg-[#a8442c] dark:bg-[#e0a085]', urgente: 'bg-[#a8442c] dark:bg-[#e0a085]',
+  media: 'bg-[#8a6438] dark:bg-[#d6a87a]', normal: 'bg-[#415a7e] dark:bg-[#9bb3d4]',
+  baixa: 'bg-[#3f7376] dark:bg-[#7fb8ba]',
+}
+
+function Chip({ children, tone = 'default' }: { children: ReactNode; tone?: 'type' | 'default' }) {
+  return (
+    <span className={cn(
+      'inline-flex items-center gap-1.5 h-[23px] px-2.5 rounded-md text-[11px] font-semibold whitespace-nowrap',
+      tone === 'type'
+        ? 'text-[#415a7e] bg-[#edf1f7] dark:text-[#9bb3d4] dark:bg-[#46627f]/[0.2]'
+        : 'text-[#5a6775] bg-[#f3f1ea] dark:text-[#bcd2e6] dark:bg-[#232f42]',
+    )}>{children}</span>
+  )
+}
+
+function MetaCol({ Icon, label, children }: { Icon: LucideIcon; label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5 min-w-0">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#9aa1a8] dark:text-[#5a6675]">
+        <Icon className="w-3 h-3" />{label}
+      </div>
+      <div className="min-h-[28px] flex items-center">{children}</div>
+    </div>
+  )
+}
+
+function SectionCard({ Icon, label, right, children }: { Icon: LucideIcon; label: string; right?: ReactNode; children: ReactNode }) {
+  return (
+    <div className="p-4 rounded-[16px] bg-[#fcfbf8] dark:bg-[#1b2536] border border-[#f0ede3] dark:border-[#253345]">
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.05em] text-[#9aa1a8] dark:text-[#5a6675]">
+          <Icon className="w-[13px] h-[13px]" />{label}
+        </div>
+        {right}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+type TileColor = 'success' | 'teal' | 'slate' | 'info' | 'warning' | 'danger'
+const TILE_TINT: Record<TileColor, string> = {
+  success: 'text-[#3f6a54] bg-[#eaf4ee] hover:bg-[#dcece2] dark:text-[#8db8a0] dark:bg-[#3f6a54]/[0.16] dark:hover:bg-[#3f6a54]/[0.26]',
+  teal: 'text-[#3f7376] bg-[#e8f5f5] hover:bg-[#d7efef] dark:text-[#7fb8ba] dark:bg-[#3f7376]/[0.16] dark:hover:bg-[#3f7376]/[0.26]',
+  slate: 'text-[#34495e] bg-[#eef1f6] hover:bg-[#e3e9f2] dark:text-[#9eb1cc] dark:bg-[#46627f]/[0.18] dark:hover:bg-[#46627f]/[0.28]',
+  info: 'text-[#415a7e] bg-[#edf1f7] hover:bg-[#e1e9f3] dark:text-[#9bb3d4] dark:bg-[#46627f]/[0.18] dark:hover:bg-[#46627f]/[0.28]',
+  warning: 'text-[#8a6438] bg-[#f8f0e6] hover:bg-[#f0e4d2] dark:text-[#d6a87a] dark:bg-[#8a6438]/[0.18] dark:hover:bg-[#8a6438]/[0.28]',
+  danger: 'text-[#a8442c] bg-[#fbece5] hover:bg-[#f6dccf] dark:text-[#e0a085] dark:bg-[#a8442c]/[0.18] dark:hover:bg-[#a8442c]/[0.28]',
+}
+function ActTile({ Icon, label, color, filled, onClick }: {
+  Icon: LucideIcon; label: string; color: TileColor; filled?: boolean; onClick?: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'flex-1 min-w-[82px] h-16 rounded-[12px] flex flex-col items-center justify-center gap-1.5 transition-all',
+        filled
+          ? (color === 'success'
+              ? 'bg-gradient-to-br from-[#3f6a54] to-[#4a7a61] text-white shadow-[0_4px_12px_-4px_rgba(63,106,84,0.4)] hover:brightness-[1.06]'
+              : 'bg-gradient-to-br from-[#3f7376] to-[#4a8689] text-white shadow-[0_4px_12px_-4px_rgba(63,115,118,0.4)] hover:brightness-[1.06]')
+          : TILE_TINT[color],
+      )}
+    >
+      <Icon className="w-[18px] h-[18px]" />
+      <span className="text-[11.5px] font-semibold">{label}</span>
+    </button>
   )
 }
 
@@ -368,7 +456,6 @@ export default function TarefaDetailModal({
   }, [tarefa.status])
 
   // Determinar tipo
-  const isPrazoProcessual = tarefa.tipo === 'prazo_processual'
   const isFixa = tarefa.tipo === 'fixa'
   const isConcluido = statusOtimista ? statusOtimista === 'concluida' : tarefa.status === 'concluida'
 
@@ -385,16 +472,6 @@ export default function TarefaDetailModal({
       urgente: 'Urgente',
     }
     return labels[prioridade] || prioridade
-  }
-
-  const getPrioridadeColor = (prioridade: string) => {
-    const colors: Record<string, string> = {
-      baixa: 'text-slate-500 dark:text-slate-400',
-      normal: 'text-blue-600 dark:text-blue-400',
-      alta: 'text-amber-600 dark:text-amber-400',
-      urgente: 'text-red-600 dark:text-red-400',
-    }
-    return colors[prioridade] || 'text-slate-600'
   }
 
   const formatProcessoPartes = (processo: ProcessoInfo) => {
@@ -548,7 +625,7 @@ export default function TarefaDetailModal({
     <>
     <Dialog open={open} onOpenChange={handleMainDialogOpenChange}>
       <DialogContent
-        className="max-w-2xl p-0 overflow-hidden border-0"
+        className="sm:max-w-[760px] p-0 gap-0 overflow-hidden border border-[#e6e3da] dark:border-[#2e3a52] rounded-[20px] bg-white dark:bg-[#151e2b] dark:dark-dialog-glow [&>button]:hidden"
         onPointerDownOutside={(e) => {
           // Prevenir fechamento quando dialogs secundários estão abertos
           if (prazoFatalWarningOpen || confirmPrazoFatalOpen || calendarField !== null) {
@@ -562,115 +639,79 @@ export default function TarefaDetailModal({
         }}
       >
         <DialogTitle className="sr-only">Detalhes da Tarefa</DialogTitle>
-        <div className="bg-white dark:bg-surface-1 rounded-lg flex flex-col max-h-[85vh]">
+        <div className="flex flex-col max-h-[88vh]">
 
-          {/* Header Minimalista */}
-          <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800 flex-shrink-0">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
-                {tarefa.titulo}
-              </h2>
-              <div className="flex items-center gap-3 text-[10px] text-slate-500 dark:text-slate-400">
-                {tarefa.pessoal && (
-                  <span className="inline-flex items-center gap-1 bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium" title="Tarefa pessoal — só você vê">
-                    <Lock className="w-2.5 h-2.5" />
-                    Pessoal
-                  </span>
-                )}
-                {tarefa.status === 'cancelada' && (
-                  <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-600 rounded px-1.5 py-0.5 text-[10px] font-medium">
-                    <Ban className="w-2.5 h-2.5" />
-                    Cancelada
-                  </span>
-                )}
-                <span>{getLocalTipoLabel(tarefa.tipo)}</span>
-                {getTipoCategoria(tarefa.tipo) && (
-                  <span className={cn(
-                    'inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-medium',
-                    getTipoCategoria(tarefa.tipo) === 'contencioso'
-                      ? 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
-                      : 'bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-400'
-                  )}>
-                    {getTipoCategoria(tarefa.tipo) === 'contencioso' ? 'Contencioso' : 'Consultivo'}
-                  </span>
-                )}
-                {isFixa && (
-                  <span className="inline-flex items-center gap-1 bg-teal-50 dark:bg-teal-500/10 text-teal-700 dark:text-teal-400 border border-teal-200 dark:border-teal-500/30 rounded px-1.5 py-0.5 text-[10px] font-medium">
-                    Aparece todo dia
-                  </span>
-                )}
-                <span className={cn("font-medium", getPrioridadeColor(tarefa.prioridade))}>
-                  {getPrioridadeLabel(tarefa.prioridade)}
+          {/* HEADER */}
+          <div className="flex items-start gap-4 px-6 pt-6 pb-3 flex-shrink-0">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-3 flex-wrap">
+                <Chip tone="type"><FileText className="w-[11px] h-[11px]" />{getLocalTipoLabel(tarefa.tipo)}</Chip>
+                {isFixa && <Chip>Aparece todo dia</Chip>}
+                {tarefa.pessoal && <Chip><Lock className="w-[11px] h-[11px]" />Pessoal</Chip>}
+                {tarefa.status === 'cancelada' && <Chip><Ban className="w-[11px] h-[11px]" />Cancelada</Chip>}
+                <span className={cn('inline-flex items-center gap-1.5 h-[23px] px-2.5 rounded-full text-[11px] font-bold', PRIOR_PILL[tarefa.prioridade] || PRIOR_PILL.normal)}>
+                  <span className={cn('w-1.5 h-1.5 rounded-full', PRIOR_DOT[tarefa.prioridade] || PRIOR_DOT.normal)} />
+                  Prioridade {getPrioridadeLabel(tarefa.prioridade).toLowerCase()}
                 </span>
               </div>
+              <h2
+                className={cn(
+                  'text-[21px] font-semibold leading-[1.28] tracking-[-0.015em] text-[#1a2330] dark:text-[#e8ecf2] [text-wrap:pretty]',
+                  isConcluido && 'line-through opacity-50',
+                )}
+                style={{ fontFamily: 'var(--font-fraunces)' }}
+              >
+                {tarefa.titulo}
+              </h2>
             </div>
-
-            {/* Metadata sutil */}
-            <div className="flex items-center gap-2 mt-3 text-[10px] text-slate-400">
-              <Clock className="w-3 h-3" />
-              <span>Criada {formatBrazilDate(tarefa.created_at)}</span>
-            </div>
+            <button
+              onClick={() => onOpenChange(false)}
+              aria-label="Fechar"
+              className="w-[34px] h-[34px] rounded-[9px] flex items-center justify-center flex-shrink-0 bg-[#f3f1ea] dark:bg-[#232f42] text-[#5a6775] dark:text-[#8a97a8] hover:bg-[#ece9e2] dark:hover:bg-[#313f57] transition-colors"
+            >
+              <X className="w-[15px] h-[15px]" />
+            </button>
           </div>
 
-          {/* Conteúdo Principal */}
-          <div className="p-6 space-y-4 overflow-y-auto flex-1">
-
-            {/* DESCRIÇÃO */}
-            <div>
-              <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                Descrição
-              </div>
+          {/* CORPO EM SEÇÕES */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-6 pt-2 pb-4 flex flex-col gap-3">
+            {/* Descrição */}
+            <SectionCard Icon={FileText} label="Descrição">
               {tarefa.descricao ? (
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed max-h-32 overflow-y-auto">
-                  {tarefa.descricao}
-                </p>
-              ) : (
-                <p className="text-xs text-slate-400 dark:text-slate-500 italic">
-                  Sem descrição
-                </p>
-              )}
-            </div>
-
-            {/* PROCESSO VINCULADO */}
-            {tarefa.processo_id && (
-              <div>
-                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5">
-                  Processo Vinculado
+                <div className="max-h-[150px] overflow-y-auto pr-1">
+                  <p className="text-[13px] leading-[1.55] text-[#2c3e50] dark:text-[#d8e2ef] [text-wrap:pretty]">{tarefa.descricao}</p>
                 </div>
+              ) : (
+                <p className="text-[13px] italic text-[#9aa1a8] dark:text-[#5a6675]">Sem descrição</p>
+              )}
+            </SectionCard>
+
+            {/* Processo vinculado */}
+            {tarefa.processo_id && (
+              <SectionCard Icon={Scale} label="Processo vinculado">
                 {processoInfo ? (
-                  <div className="flex items-center gap-2 p-2 bg-slate-50 dark:bg-surface-0 rounded-md">
-                    <button
-                      onClick={() => onProcessoClick?.(processoInfo.id)}
-                      className="flex-1 text-left hover:bg-slate-100 dark:hover:bg-surface-3 rounded transition-colors p-1 -m-1 group"
-                    >
-                      <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
-                        <span>Pasta {processoInfo.numero_pasta || 'S/N'}</span>
+                  <div className="flex items-start gap-2">
+                    <button onClick={() => onProcessoClick?.(processoInfo.id)} className="flex-1 min-w-0 text-left group">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-semibold text-[#1a2330] dark:text-[#e8ecf2]">Pasta {processoInfo.numero_pasta || 'S/N'}</span>
                         {processoInfo.status && (
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400">• {processoInfo.status}</span>
+                          <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold text-[#3f7376] dark:text-[#7fb8ba]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#89bcbe]" />{processoInfo.status}
+                          </span>
                         )}
-                        <svg className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-400 ml-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                        </svg>
+                        <ChevronRight className="w-4 h-4 text-[#9aa1a8] group-hover:text-[#3f7376] ml-auto flex-shrink-0" />
                       </div>
                       {processoInfo.numero_cnj && (
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 font-mono">
-                          {processoInfo.numero_cnj}
-                        </div>
+                        <div className="text-[11.5px] font-mono text-[#5a6775] dark:text-[#8a97a8] mt-1">{processoInfo.numero_cnj}</div>
                       )}
                       {formatProcessoPartes(processoInfo) && (
-                        <div className="text-[10px] text-slate-600 mt-1">
-                          {formatProcessoPartes(processoInfo)}
-                        </div>
+                        <div className="text-[11.5px] text-[#5a6775] dark:text-[#8a97a8] mt-1">{formatProcessoPartes(processoInfo)}</div>
                       )}
                     </button>
                     {processoInfo.numero_cnj && (
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigator.clipboard.writeText(processoInfo.numero_cnj!)
-                          toast.success('Número copiado!')
-                        }}
-                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-surface-3 text-slate-400 dark:text-slate-500 hover:text-[#89bcbe] transition-colors flex-shrink-0"
+                        onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(processoInfo.numero_cnj!); toast.success('Número copiado!') }}
+                        className="p-1.5 rounded-lg text-[#9aa1a8] dark:text-[#5a6675] hover:bg-[#efece4] dark:hover:bg-[#222d3f] hover:text-[#3f7376] transition-colors flex-shrink-0"
                         title="Copiar número do processo"
                       >
                         <Copy className="w-3.5 h-3.5" />
@@ -678,85 +719,82 @@ export default function TarefaDetailModal({
                     )}
                   </div>
                 ) : (
-                  <div className="p-2 bg-slate-50 dark:bg-surface-0 rounded-md text-xs text-slate-400 dark:text-slate-500 italic">
-                    {loadingProcesso ? 'Carregando...' : 'Erro ao carregar processo'}
-                  </div>
+                  <div className="text-[12.5px] italic text-[#9aa1a8] dark:text-[#5a6675]">{loadingProcesso ? 'Carregando...' : 'Erro ao carregar processo'}</div>
                 )}
-              </div>
+              </SectionCard>
             )}
 
-            {/* CONSULTIVO VINCULADO */}
+            {/* Consulta vinculada */}
             {consultivoInfo && (
-              <div>
-                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                  Consultivo Vinculado
-                </div>
-                <button
-                  onClick={() => onConsultivoClick?.(consultivoInfo.id)}
-                  className="w-full text-left p-3 bg-slate-50 dark:bg-surface-0 rounded-md hover:bg-slate-100 dark:hover:bg-surface-3 transition-colors group"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                        {consultivoInfo.titulo}
-                      </div>
-                      {consultivoInfo.status && (
-                        <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
-                          Status: {consultivoInfo.status}
-                        </div>
-                      )}
-                    </div>
-                    <svg className="w-4 h-4 text-slate-300 group-hover:text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-                    </svg>
+              <SectionCard Icon={FileText} label="Consulta vinculada">
+                <button onClick={() => onConsultivoClick?.(consultivoInfo.id)} className="w-full text-left group flex items-center gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-[#1a2330] dark:text-[#e8ecf2]">{consultivoInfo.titulo}</div>
+                    {consultivoInfo.status && (
+                      <div className="text-[11px] text-[#5a6775] dark:text-[#8a97a8] mt-0.5">Status: {consultivoInfo.status}</div>
+                    )}
                   </div>
+                  <ChevronRight className="w-4 h-4 text-[#9aa1a8] group-hover:text-[#3f7376] flex-shrink-0" />
                 </button>
-              </div>
+              </SectionCard>
             )}
 
-            {/* INFORMAÇÕES ORGANIZADAS EM LAYOUT FLUIDO */}
-            <div className="flex flex-wrap gap-x-6 gap-y-3">
-              {/* Data de Execução */}
-              <div className="min-w-[140px]">
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
-                  <CalendarDays className="w-3 h-3 text-slate-400 inline mr-1.5 align-text-bottom" />
-                  {isFixa ? 'Frequência' : 'Data de Execução'}
-                </div>
-                <div className="h-5">
-                  {isFixa ? (
-                    <span className="text-xs text-teal-600 dark:text-teal-400 font-medium">Todo dia (tarefa fixa)</span>
-                  ) : (
-                    <DateRescheduleButton
-                      field="data_inicio"
-                      currentDate={localDataInicio}
-                      dateDropdownOpen={dateDropdownOpen}
-                      setDateDropdownOpen={setDateDropdownOpen}
-                      updatingDate={updatingDate}
-                      setCalendarField={setCalendarField}
-                      handleUpdateDate={handleUpdateDate}
-                      getUrgency={getUrgency}
-                    />
-                  )}
-                </div>
-              </div>
-
-              {/* Prazo Fatal - Para todas as tarefas com prazo_data_limite (nunca para fixas) */}
-              {!isFixa && localPrazoDataLimite && (
-                <div className="min-w-[140px]">
-                  <div className="text-[10px] text-red-600 dark:text-red-400 font-medium mb-1 h-4">
-                    <AlertCircle className="w-3 h-3 text-red-500 inline mr-1.5 align-text-bottom" />
-                    Prazo Fatal
-                    <span className="text-[10px] text-slate-400 font-normal ml-1">
-                      {(() => {
-                        const diasEntreDatas = differenceInDays(
-                          parseDBDate(localPrazoDataLimite),
-                          parseDBDate(localDataInicio)
-                        )
-                        return diasEntreDatas > 0 ? `(${diasEntreDatas}d)` : diasEntreDatas === 0 ? '(hoje)' : `(${Math.abs(diasEntreDatas)}d atrás)`
-                      })()}
+            {/* Responsáveis */}
+            <SectionCard
+              Icon={Users}
+              label="Responsáveis"
+              right={
+                <span className="text-[11px] text-[#9aa1a8] dark:text-[#5a6675]">
+                  {tarefa.criado_por_nome ? `criada por ${tarefa.criado_por_nome} · ` : 'criada '}{formatBrazilDate(tarefa.created_at)}
+                </span>
+              }
+            >
+              {loadingResponsaveis ? (
+                <span className="text-[12.5px] italic text-[#9aa1a8] dark:text-[#5a6675]">Carregando...</span>
+              ) : responsaveis.length > 0 ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  {responsaveis.map((resp) => (
+                    <span key={resp.id} className="inline-flex items-center gap-2 h-[30px] pl-1 pr-3 rounded-full bg-[#f7f5f0] dark:bg-white/[0.07]">
+                      <span className="w-[23px] h-[23px] rounded-full text-white text-[9px] font-bold flex items-center justify-center" style={{ background: avatarCor(resp.nome_completo) }}>
+                        {iniciaisNome(resp.nome_completo)}
+                      </span>
+                      <span className="text-[12px] font-medium text-[#5a6775] dark:text-[#9fadbf]">{resp.nome_completo}</span>
                     </span>
-                  </div>
-                  <div className="h-5">
+                  ))}
+                </div>
+              ) : tarefa.responsavel_nome ? (
+                <span className="text-[12.5px] text-[#2c3e50] dark:text-[#d8e2ef]">{tarefa.responsavel_nome}</span>
+              ) : (
+                <span className="text-[12.5px] italic text-[#9aa1a8] dark:text-[#5a6675]">Não atribuído</span>
+              )}
+            </SectionCard>
+
+            {/* Linha de datas / status / horas (sem fundo, depois de responsáveis) */}
+            <div className="flex items-center gap-x-5 gap-y-3 flex-wrap px-1 py-1">
+              <MetaCol Icon={CalendarDays} label={isFixa ? 'Frequência' : 'Execução'}>
+                {isFixa ? (
+                  <span className="text-[12.5px] font-medium text-[#3f7376] dark:text-[#7fb8ba]">Todo dia (tarefa fixa)</span>
+                ) : (
+                  <DateRescheduleButton
+                    field="data_inicio"
+                    currentDate={localDataInicio}
+                    dateDropdownOpen={dateDropdownOpen}
+                    setDateDropdownOpen={setDateDropdownOpen}
+                    updatingDate={updatingDate}
+                    setCalendarField={setCalendarField}
+                    handleUpdateDate={handleUpdateDate}
+                    getUrgency={getUrgency}
+                  />
+                )}
+              </MetaCol>
+
+              {!isFixa && localPrazoDataLimite && (
+                <>
+                  <div className="w-px h-9 bg-[#f0ede3] dark:bg-[#253345]" />
+                  <MetaCol Icon={Flag} label={(() => {
+                    const dias = differenceInDays(parseDBDate(localPrazoDataLimite), parseDBDate(localDataInicio))
+                    return `Prazo fatal ${dias > 0 ? `(${dias}d)` : dias === 0 ? '(hoje)' : `(${Math.abs(dias)}d atrás)`}`
+                  })()}>
                     <DateRescheduleButton
                       field="prazo_data_limite"
                       currentDate={localPrazoDataLimite}
@@ -767,258 +805,119 @@ export default function TarefaDetailModal({
                       handleUpdateDate={handleUpdateDate}
                       getUrgency={getUrgency}
                     />
-                  </div>
-                </div>
+                  </MetaCol>
+                </>
               )}
 
-              {/* Responsáveis */}
-              <div className="min-w-[120px]">
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
-                  {responsaveis.length > 1 ? 'Responsáveis' : 'Responsável'}
-                </div>
-                <div className="min-h-[20px] leading-5">
-                  {loadingResponsaveis ? (
-                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">Carregando...</span>
-                  ) : responsaveis.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {responsaveis.map((resp, idx) => (
-                        <span
-                          key={resp.id}
-                          className="text-xs text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-surface-2 px-1.5 py-0.5 rounded"
-                        >
-                          {resp.nome_completo}
-                        </span>
-                      ))}
-                    </div>
-                  ) : tarefa.responsavel_nome ? (
-                    <span className="text-xs text-slate-700 dark:text-slate-300">
-                      {tarefa.responsavel_nome}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400 dark:text-slate-500 italic">
-                      Não atribuído
-                    </span>
-                  )}
-                </div>
-              </div>
+              <div className="w-px h-9 bg-[#f0ede3] dark:bg-[#253345]" />
+              <MetaCol Icon={Info} label="Status">
+                <span className="inline-flex items-center gap-2 h-7 px-3 rounded-full text-[11.5px] font-semibold bg-[#f3f1ea] dark:bg-[#232f42] text-[#2c3e50] dark:text-[#d8e2ef] border border-[#e6e3da] dark:border-[#37455f]">
+                  <span className={cn('w-[7px] h-[7px] rounded-full',
+                    isConcluido ? 'bg-[#3f6a54]'
+                    : tarefa.status === 'em_andamento' ? 'bg-[#46627f]'
+                    : tarefa.status === 'em_pausa' ? 'bg-[#c2956b]'
+                    : tarefa.status === 'cancelada' ? 'bg-[#9aa1a8]' : 'bg-[#c2956b]')} />
+                  {isConcluido ? 'Concluída'
+                    : tarefa.status === 'em_andamento' ? 'Em andamento'
+                    : tarefa.status === 'em_pausa' ? 'Em pausa'
+                    : tarefa.status === 'cancelada' ? 'Cancelada' : 'Pendente'}
+                </span>
+              </MetaCol>
 
-              {/* Status */}
-              <div className="min-w-[100px]">
-                <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
-                  Status
-                </div>
-                <div className="h-5 flex items-center gap-2">
-                  <div className={cn(
-                    "w-2 h-2 rounded-full",
-                    tarefa.status === 'concluida' ? "bg-emerald-500" :
-                    tarefa.status === 'em_andamento' ? "bg-blue-500" :
-                    tarefa.status === 'em_pausa' ? "bg-amber-400" :
-                    tarefa.status === 'cancelada' ? "bg-slate-400" :
-                    "bg-amber-500"
-                  )} />
-                  <span className="text-xs text-slate-700 dark:text-slate-300 capitalize">
-                    {tarefa.status?.replace('_', ' ') || 'Pendente'}
+              <div className="flex-1" />
+
+              {timesheetEntries && timesheetEntries.length > 0 && (
+                <button
+                  onClick={() => setTimesheetListOpen(true)}
+                  className="inline-flex items-center gap-2 h-9 px-3 rounded-[9px] text-[12px] font-medium text-[#5a6775] dark:text-[#8a97a8] hover:bg-[#f3f1ea] dark:hover:bg-[#1b2536] transition-colors"
+                >
+                  <Clock className="w-3.5 h-3.5 text-[#3f7376] dark:text-[#7fb8ba]" />
+                  Horas lançadas
+                  <span className="font-mono font-semibold text-[#2c3e50] dark:text-[#edf1f7]">
+                    {formatHoras(timesheetEntries.reduce((s, e) => s + (Number(e.horas) || 0), 0), 'curto')}
                   </span>
-                </div>
-              </div>
-
-              {/* Criado por */}
-              {tarefa.criado_por_nome && (
-                <div className="min-w-[120px]">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
-                    Criado por
-                  </div>
-                  <div className="h-5 flex items-center">
-                    <span className="text-xs text-slate-600 dark:text-slate-400">
-                      {tarefa.criado_por_nome}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Data de Conclusão */}
-              {tarefa.data_conclusao && (
-                <div className="min-w-[140px]">
-                  <div className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 h-4">
-                    Concluído em
-                  </div>
-                  <div className="h-5 flex items-center">
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400">
-                      {formatBrazilDate(parseDBDate(tarefa.data_conclusao))}
-                    </span>
-                  </div>
-                </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-[#9aa1a8] dark:text-[#5a6675]" />
+                </button>
               )}
             </div>
 
-            {/* RECORRÊNCIA */}
+            {/* Recorrência */}
             {recorrenciaInfo && (
-              <div>
-                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                  Recorrência
-                </div>
-                <div className="text-xs text-slate-600 dark:text-slate-400">
-                  {recorrenciaInfo.regra_frequencia} - A cada {recorrenciaInfo.regra_intervalo}{' '}
-                  {recorrenciaInfo.regra_intervalo === 1 ? 'vez' : 'vezes'}
+              <SectionCard Icon={RotateCcw} label="Recorrência">
+                <div className="text-[12.5px] text-[#2c3e50] dark:text-[#d8e2ef]">
+                  {recorrenciaInfo.regra_frequencia} — A cada {recorrenciaInfo.regra_intervalo} {recorrenciaInfo.regra_intervalo === 1 ? 'vez' : 'vezes'}
                   {recorrenciaInfo.data_fim && (
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block mt-1">
-                      Até {formatBrazilDate(parseDBDate(recorrenciaInfo.data_fim))}
-                    </span>
+                    <span className="block text-[11px] text-[#9aa1a8] dark:text-[#5a6675] mt-1">Até {formatBrazilDate(parseDBDate(recorrenciaInfo.data_fim))}</span>
                   )}
                 </div>
-              </div>
+              </SectionCard>
             )}
 
-            {/* OBSERVAÇÕES */}
+            {/* Observações */}
             {tarefa.observacoes && (
-              <div>
-                <div className="text-[10px] font-medium text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">
-                  Observações
-                </div>
-                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
-                  {tarefa.observacoes}
-                </p>
-              </div>
+              <SectionCard Icon={FileText} label="Observações">
+                <p className="text-[13px] leading-[1.55] text-[#2c3e50] dark:text-[#d8e2ef]">{tarefa.observacoes}</p>
+              </SectionCard>
             )}
 
+            {/* Concluída em */}
+            {tarefa.data_conclusao && (
+              <div className="flex items-center gap-2 px-1 text-[11.5px] font-medium text-[#3f6a54] dark:text-[#8db8a0]">
+                <Check className="w-3.5 h-3.5" />
+                Concluída em {formatBrazilDate(parseDBDate(tarefa.data_conclusao))}
+              </div>
+            )}
           </div>
 
-          {/* Footer com Ações */}
-          <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-surface-0/50 flex-shrink-0">
-            <div className="flex items-center justify-between flex-wrap gap-y-2">
-              {/* Grupo esquerdo: ações primárias + timer */}
-              <div className="flex items-center gap-2">
-                {/* Concluir/Reabrir com feedback otimista */}
-                {!isConcluido ? (
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      setStatusOtimista('concluida')
-                      onConcluir?.()
-                    }}
-                    className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                  >
-                    <Check className="w-3.5 h-3.5 mr-1.5" />
-                    {isFixa ? 'Concluir Hoje' : 'Concluir'}
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setStatusOtimista('pendente')
-                      onReabrir?.()
-                    }}
-                    className="h-8 text-xs border-slate-200 dark:border-slate-700"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
-                    Reabrir
-                  </Button>
-                )}
+          {/* RODAPÉ — tiles de ação (todos visíveis, coloridos no DS) */}
+          <div className="flex gap-2 px-6 py-3.5 border-t border-[#f0ede3] dark:border-[#253345] bg-[#faf9f5] dark:bg-white/[0.018] flex-wrap flex-shrink-0">
+            {!isConcluido ? (
+              <ActTile
+                Icon={Check}
+                label={isFixa ? 'Concluir hoje' : 'Concluir'}
+                color="success"
+                filled
+                onClick={() => { setStatusOtimista('concluida'); onConcluir?.() }}
+              />
+            ) : (
+              <ActTile
+                Icon={RotateCcw}
+                label="Reabrir"
+                color="success"
+                onClick={() => { setStatusOtimista('pendente'); onReabrir?.() }}
+              />
+            )}
 
-                {/* Botão Lançar Horas - só aparece se tem processo ou consultivo vinculado */}
-                {/* Para fixas é a ação principal (estilo destacado) */}
-                {onLancarHoras && (tarefa.processo_id || tarefa.consultivo_id) && (
-                  <Button
-                    size="sm"
-                    variant={isFixa ? 'default' : 'outline'}
-                    onClick={onLancarHoras}
-                    className={cn(
-                      "h-8 text-xs",
-                      isFixa
-                        ? "bg-[#89bcbe] hover:bg-[#6ba9ab] text-white"
-                        : "border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
-                    )}
-                  >
-                    <Timer className="w-3.5 h-3.5 mr-1.5" />
-                    Lançar Horas
-                  </Button>
-                )}
+            <ActTile
+              Icon={timerExistente?.status === 'rodando' ? PauseCircle : PlayCircle}
+              label={timerExistente?.status === 'rodando' ? 'Pausar' : timerExistente?.status === 'pausado' ? 'Retomar' : 'Timer'}
+              color="teal"
+              filled={timerExistente?.status === 'rodando'}
+              onClick={handleTimerClick}
+            />
 
-                {/* Botão Ver Horas - só aparece quando há lançamentos */}
-                {timesheetEntries && timesheetEntries.length > 0 && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setTimesheetListOpen(true)}
-                    className="h-8 text-xs border-slate-200 dark:border-slate-700 text-[#34495e] dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-surface-2"
-                  >
-                    <Clock className="w-3.5 h-3.5 mr-1.5" />
-                    Ver Horas
-                    <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-surface-2 text-[9px] font-semibold text-slate-500 dark:text-slate-400">
-                      {timesheetEntries.length}
-                    </span>
-                  </Button>
-                )}
+            {onLancarHoras && (tarefa.processo_id || tarefa.consultivo_id) && (
+              <ActTile Icon={Timer} label="Lançar" color="teal" onClick={onLancarHoras} />
+            )}
 
-                {/* Botão Timer - sempre visível */}
-                <Button
-                  size="sm"
-                  variant={timerExistente?.status === 'rodando' ? 'default' : 'outline'}
-                  onClick={handleTimerClick}
-                  className={cn(
-                    "h-8 text-xs min-w-[120px]",
-                    timerExistente?.status === 'rodando'
-                      ? "bg-amber-500 hover:bg-amber-600 text-white"
-                      : "border-[#89bcbe] text-[#34495e] dark:text-slate-200 hover:bg-[#f0f9f9] dark:hover:bg-teal-900/20"
-                  )}
-                >
-                  {timerExistente?.status === 'rodando' ? (
-                    <><PauseCircle className="w-3.5 h-3.5 mr-1.5" /> Pausar</>
-                  ) : timerExistente?.status === 'pausado' ? (
-                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Retomar</>
-                  ) : (
-                    <><PlayCircle className="w-3.5 h-3.5 mr-1.5" /> Iniciar Timer</>
-                  )}
-                </Button>
-              </div>
+            <ActTile Icon={Edit2} label="Editar" color="slate" onClick={onEdit} />
 
-              {/* Grupo direito: editar + cancelar + excluir */}
-              <div className="flex items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={onEdit}
-                  className="h-8 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
-                >
-                  <Edit2 className="w-3.5 h-3.5 mr-1.5" />
-                  Editar
-                </Button>
+            {onCancelar && tarefa.status !== 'cancelada' && (
+              <ActTile Icon={Ban} label="Cancelar" color="warning" onClick={onCancelar} />
+            )}
 
-                {onCancelar && tarefa.status !== 'cancelada' && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={onCancelar}
-                    className="h-8 text-xs text-slate-600 dark:text-slate-400 hover:text-[#34495e] dark:hover:text-slate-100"
-                  >
-                    <Ban className="w-3.5 h-3.5 mr-1.5" />
-                    Cancelar
-                  </Button>
-                )}
-
-                {onDelete && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={onDelete}
-                    className="h-8 text-xs text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 mr-1.5" />
-                    Excluir
-                  </Button>
-                )}
-              </div>
-            </div>
+            {onDelete && (
+              <ActTile Icon={Trash2} label="Excluir" color="danger" onClick={onDelete} />
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
 
-    {/* Calendar Dialog separado para Data Personalizada */}
+    {/* Calendar Dialog separado para "Escolher outra data" (V4) */}
     <Dialog open={calendarField !== null} onOpenChange={(open) => !open && setCalendarField(null)}>
-      <DialogContent className="max-w-fit p-4">
-        <DialogTitle className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+      <DialogContent className="max-w-fit p-4 rounded-[18px] border border-[#e6e3da] dark:border-[#2e3a52] bg-white dark:bg-[#151e2b] dark:dark-dialog-glow">
+        <DialogTitle className="text-[14px] font-semibold text-[#1a2330] dark:text-[#e8ecf2] mb-2">
           Selecione a nova data
         </DialogTitle>
         <CalendarComponent
@@ -1234,10 +1133,12 @@ export default function TarefaDetailModal({
         open={timesheetListOpen}
         onOpenChange={setTimesheetListOpen}
         entries={timesheetEntries}
+        tituloTarefa={tarefa.titulo}
         onEditEntry={(entry) => {
           setTimesheetListOpen(false)
           setEditTimesheetEntry(entry)
         }}
+        onNewEntry={onLancarHoras ? () => { setTimesheetListOpen(false); onLancarHoras() } : undefined}
       />
     )}
 

@@ -146,7 +146,7 @@ function DroppableDay({
       ref={setNodeRef}
       onClick={onDateSelect}
       className={cn(
-        'relative h-full flex flex-col gap-1 px-[7px] pt-[7px] pb-2 overflow-hidden cursor-pointer transition-[background-color,box-shadow]',
+        'relative h-full flex flex-col gap-0.5 px-[7px] pt-[4px] pb-2 overflow-hidden cursor-pointer transition-[background-color,box-shadow]',
         className,
         isOver && 'ring-2 ring-inset ring-[#89bcbe] z-10',
       )}
@@ -588,10 +588,10 @@ export default function CalendarGridDnD({
                             <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-gradient-to-r from-[#34495e] to-[#46627f]" />
                           )}
                           {/* cabeçalho do dia */}
-                          <div className="flex items-center justify-between gap-1">
+                          <div className="flex items-center justify-between gap-1 min-h-6">
                             {isTodayDate ? (
                               <span
-                                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[14px] font-semibold bg-gradient-to-br from-[#34495e] to-[#46627f] shadow-[0_2px_6px_-1px_rgba(52,73,94,0.5)]"
+                                className="inline-flex items-center justify-center w-6 h-6 rounded-full text-white text-[14px] font-semibold leading-none bg-gradient-to-br from-[#34495e] to-[#46627f] shadow-[0_2px_6px_-1px_rgba(52,73,94,0.5)]"
                                 style={{ fontFamily: 'var(--font-fraunces)' }}
                               >
                                 {format(day, 'd')}
@@ -599,7 +599,7 @@ export default function CalendarGridDnD({
                             ) : (
                               <span
                                 className={cn(
-                                  'font-mono text-[12px] font-medium tracking-[-0.02em]',
+                                  'font-mono text-[12px] font-medium leading-none tracking-[-0.02em]',
                                   !inMonth || isWeekendDay
                                     ? 'text-[#9aa1a8] dark:text-[#5a6675]'
                                     : 'text-[#5a6775] dark:text-[#8a97a8]',

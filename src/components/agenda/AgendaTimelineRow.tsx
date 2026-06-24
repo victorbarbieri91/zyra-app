@@ -298,6 +298,7 @@ function ReagendarBtn({ onReschedule, onCustom }: { onReschedule: (d: Date) => v
   const opcoes: { label: string; date: Date }[] = [
     { label: 'Hoje', date: hoje },
     { label: 'Amanhã', date: addDays(hoje, 1) },
+    { label: 'Daqui a 2 dias', date: addDays(hoje, 2) },
     { label: 'Próxima segunda', date: nextMonday(hoje) },
     { label: 'Daqui a 7 dias', date: addDays(hoje, 7) },
   ]

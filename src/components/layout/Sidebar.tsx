@@ -84,7 +84,7 @@ export default function Sidebar() {
     <TooltipProvider delayDuration={200}>
       <motion.aside
         initial={false}
-        animate={{ width: collapsed ? 80 : 280 }}
+        animate={{ width: collapsed ? 72 : 248 }}
         transition={{ duration: 0.3, ease: 'easeInOut' }}
         className={cn(
           'hidden md:flex flex-col relative flex-shrink-0',
@@ -112,24 +112,24 @@ export default function Sidebar() {
         </button>
 
         {/* Logo */}
-        <div className="flex items-center justify-center px-3 py-4 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center justify-center px-3 py-3.5 border-b border-slate-200 dark:border-slate-800">
           <Link href="/dashboard" className="block">
             <Image
               src="/zyra.logo.png"
               alt="Zyra Legal"
-              width={collapsed ? 48 : 160}
-              height={collapsed ? 48 : 56}
+              width={collapsed ? 40 : 140}
+              height={collapsed ? 40 : 48}
               priority
               className={cn(
                 'object-contain transition-all dark:brightness-0 dark:invert',
-                collapsed ? 'h-12 w-12' : 'h-14 w-auto',
+                collapsed ? 'h-10 w-10' : 'h-12 w-auto',
               )}
             />
           </Link>
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3.5 py-4 flex flex-col gap-1 overflow-y-auto">
+        <nav className="flex-1 px-3 py-3.5 flex flex-col gap-1 overflow-y-auto">
           {menuItems.map((item) => {
             // Dashboard é match exato; demais módulos casam com subpáginas (ex: /processos/123).
             const isActive =
@@ -225,7 +225,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Logout */}
-        <div className="px-3.5 py-3 border-t border-slate-200 dark:border-slate-800">
+        <div className="px-3 py-3 border-t border-slate-200 dark:border-slate-800">
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>

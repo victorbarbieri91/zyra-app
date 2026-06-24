@@ -83,11 +83,11 @@ export default function SearchDropdown() {
     <div ref={containerRef} className="relative w-full">
       {/* Input */}
       <div className="relative group">
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 bg-gradient-to-br from-[#89bcbe]/10 to-[#aacfd0]/10 dark:from-[#89bcbe]/15 dark:to-[#89bcbe]/10 rounded-md flex items-center justify-center group-focus-within:from-[#89bcbe]/20 group-focus-within:to-[#aacfd0]/20 transition-all">
+        <div className="absolute left-2 top-1/2 -translate-y-1/2 w-6 h-6 bg-gradient-to-br from-[#89bcbe]/10 to-[#aacfd0]/10 dark:from-[#89bcbe]/15 dark:to-[#89bcbe]/10 rounded-md flex items-center justify-center group-focus-within:from-[#89bcbe]/20 group-focus-within:to-[#aacfd0]/20 transition-all">
           {isLoading ? (
-            <Loader2 className="w-4 h-4 text-[#89bcbe] animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 text-[#89bcbe] animate-spin" />
           ) : (
-            <Search className="w-4 h-4 text-[#89bcbe] group-focus-within:scale-110 transition-transform" />
+            <Search className="w-3.5 h-3.5 text-[#89bcbe] group-focus-within:scale-110 transition-transform" />
           )}
         </div>
         <input
@@ -98,7 +98,7 @@ export default function SearchDropdown() {
           onFocus={() => setIsFocused(true)}
           onKeyDown={handleKeyDown}
           placeholder="Buscar processos ou consultivo..."
-          className="w-full pl-12 pr-4 py-2.5 bg-white dark:bg-surface-2 border-2 border-[#89bcbe]/30 dark:border-slate-600 rounded-lg text-sm text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
+          className="w-full pl-10 pr-4 py-1.5 bg-white dark:bg-surface-2 border-2 border-[#89bcbe]/30 dark:border-slate-600 rounded-lg text-[13px] text-[#34495e] dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-[#89bcbe] focus:shadow-sm focus:shadow-[#89bcbe]/10 transition-all"
         />
       </div>
 

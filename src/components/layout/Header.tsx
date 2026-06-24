@@ -55,7 +55,7 @@ export default function Header() {
 
   return (
     <>
-    <header className="h-14 md:h-16 bg-white dark:bg-surface-1 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 shadow-sm dark:shadow-none">
+    <header className="h-14 md:h-[52px] bg-white dark:bg-surface-1 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 md:px-6 shadow-sm dark:shadow-none">
       {/* Mobile: Hamburger + Logo + Avatar */}
       <div className="flex md:hidden items-center gap-3 flex-1">
         <button
@@ -84,26 +84,26 @@ export default function Header() {
       </div>
 
       {/* Desktop: Left Section - Search */}
-      <div className="hidden md:flex items-center flex-1 max-w-xl">
+      <div className="hidden md:flex items-center flex-1 max-w-md">
         <SearchDropdown />
       </div>
 
       {/* Desktop: Right Section */}
-      <div className="hidden md:flex items-center gap-3">
+      <div className="hidden md:flex items-center gap-2">
         {/* Sino de notificações */}
         <SinoAlertasPopover />
 
         {/* Theme Toggle */}
-        <ThemeToggle />
+        <ThemeToggle size="sm" />
 
         {/* Profile Menu */}
         <div className="relative">
           <button
             onClick={() => setShowProfileMenu(!showProfileMenu)}
-            className="group flex items-center gap-2.5 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-surface-2 rounded-lg transition-all"
+            className="group flex items-center gap-2 px-2.5 py-1 hover:bg-slate-50 dark:hover:bg-surface-2 rounded-lg transition-all"
           >
-            <div className="w-8 h-8 bg-gradient-to-br from-[#34495e] to-[#46627f] rounded-full flex items-center justify-center shadow-sm">
-              <User className="w-4 h-4 text-white" />
+            <div className="w-7 h-7 bg-gradient-to-br from-[#34495e] to-[#46627f] rounded-full flex items-center justify-center shadow-sm">
+              <User className="w-3.5 h-3.5 text-white" />
             </div>
             <div className="text-left hidden sm:block">
               <p className="text-sm font-semibold text-[#34495e] dark:text-slate-200 leading-tight">

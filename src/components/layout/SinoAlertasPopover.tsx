@@ -148,13 +148,13 @@ export default function SinoAlertasPopover() {
         <button
           type="button"
           aria-label="Notificações"
-          className="relative w-9 h-9 inline-flex items-center justify-center rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#34495e] dark:hover:text-slate-200 transition-colors"
+          className="relative w-8 h-8 inline-flex items-center justify-center rounded-md text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-[#34495e] dark:hover:text-slate-200 transition-colors"
         >
           <Bell className="w-4 h-4" />
           {totalAlertas > 0 && (
             <span
               className={cn(
-                'absolute top-1.5 right-1.5 min-w-[16px] h-4 px-1 rounded-full',
+                'absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full',
                 'inline-flex items-center justify-center text-[9px] font-bold leading-[16px]',
                 alertas.prazosVencidos > 0 || alertas.parcelasVencidas > 0
                   ? 'bg-state-danger text-white'

@@ -251,7 +251,10 @@ interface TarefaDetailModalProps {
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
   onUpdate?: () => void | Promise<void>
-  onClose?: () => void // Chamado quando o modal deve fechar por ação (reagendamento para outro dia, etc)
+  // Mantido por compat: antes era chamado ao reagendar para outro dia (fechava
+  // o modal). Hoje o reagendamento atualiza no lugar e usa onUpdate; o modal
+  // não dispara mais onClose. A prop segue aceita para não quebrar call sites.
+  onClose?: () => void
 }
 
 interface ProcessoInfo {
@@ -294,7 +297,6 @@ export default function TarefaDetailModal({
   onProcessoClick,
   onConsultivoClick,
   onUpdate,
-  onClose,
 }: TarefaDetailModalProps) {
   // Timer
   const { timersAtivos, iniciarTimer, pausarTimer, retomarTimer } = useTimer()
@@ -537,27 +539,28 @@ export default function TarefaDetailModal({
 
       if (error) throw error
 
-      // Verificar se a tarefa saiu do dia atual (reagendamento para outro dia)
-      if (field === 'data_inicio') {
-        const newDateBrazil = toBrazilTime(updateData[field])
-        const todayBrazil = toBrazilTime(new Date().toISOString())
-        if (newDateBrazil.toDateString() !== todayBrazil.toDateString()) {
-          // Tarefa reagendada para outro dia → fechar modal e atualizar agenda
-          toast.success('Tarefa reagendada com sucesso')
-          // Apenas onClose — ele já faz refreshAgenda() no dashboard,
-          // e o Realtime subscription também dispara invalidação automática
-          if (onClose) onClose()
-          return
-        }
-      }
+      const reagendou = field === 'data_inicio'
+      const newDateBrazil = reagendou ? toBrazilTime(updateData[field]) : null
+      const todayBrazil = toBrazilTime(new Date().toISOString())
+      const reagendouOutroDia =
+        !!newDateBrazil && newDateBrazil.toDateString() !== todayBrazil.toDateString()
 
-      toast.success(field === 'prazo_data_limite' ? 'Prazo fatal atualizado' : 'Data atualizada com sucesso')
+      toast.success(
+        field === 'prazo_data_limite'
+          ? 'Prazo fatal atualizado'
+          : reagendouOutroDia
+            ? 'Tarefa reagendada com sucesso'
+            : 'Data atualizada com sucesso'
+      )
 
-      // Atualizar state local para refletir a nova data sem fechar o modal
+      // Atualizar state local para refletir a nova data sem fechar o modal —
+      // mesmo quando reagenda para outro dia (o modal permanece aberto e
+      // mostra a data nova; antes ele dependia de um onClose que a página da
+      // Agenda nunca passava, então o reagendamento entre dias virava no-op).
       if (field === 'data_inicio') setLocalDataInicio(updateData[field])
       else setLocalPrazoDataLimite(updateData[field])
 
-      // Atualizar a agenda
+      // Atualizar a agenda por trás (reloadAgenda na página → Mês/Kanban/Lista).
       if (onUpdate) {
         await onUpdate()
       }

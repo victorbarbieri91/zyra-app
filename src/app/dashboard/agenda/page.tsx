@@ -252,18 +252,20 @@ export default function AgendaPage() {
   const { eventos, createEvento, updateEvento, refreshEventos } = useEventos(escritorioId || undefined, userId ? { responsavelId: userId } : undefined)
   const { excluirOcorrencia, excluirSerie } = useRecorrencias(escritorioId || undefined)
 
-  // Sinal de recarga do Kanban: o Kanban tem instâncias próprias de
-  // useTarefas/useEventos/useAudiencias (com janela de datas), separadas das
-  // desta página. Mutações feitas aqui (conclusão via modal de horas, etc.) não
-  // atualizam as listas do Kanban. Incrementar este contador faz o Kanban
-  // recarregar. Disparado centralmente por reloadAgenda().
-  const [kanbanRefreshKey, setKanbanRefreshKey] = useState(0)
+  // Sinal de recarga para as visões com instâncias próprias de hooks (separadas
+  // das desta página): o Kanban (useTarefas/useEventos/useAudiencias com janela
+  // de datas) e a Lista (useAgendaConsolidada próprio). Mutações feitas aqui
+  // (conclusão via modal de horas, reagendar, etc.) não atualizam essas visões
+  // sozinhas. Incrementar este contador faz Kanban e Lista recarregarem.
+  // Disparado centralmente por reloadAgenda().
+  const [agendaRefreshKey, setAgendaRefreshKey] = useState(0)
 
-  // Helper único de recarga: atualiza as listas desta página E sinaliza o
-  // Kanban. Todo handler que altera um item da agenda deve terminar chamando-o.
+  // Helper único de recarga: atualiza as listas desta página E sinaliza
+  // Kanban/Lista. Todo handler que altera um item da agenda deve terminar
+  // chamando-o.
   const reloadAgenda = useCallback(async () => {
     await Promise.all([refreshItems(), refreshTarefas(), refreshAudiencias(), refreshEventos()])
-    setKanbanRefreshKey(k => k + 1)
+    setAgendaRefreshKey(k => k + 1)
   }, [refreshItems, refreshTarefas, refreshAudiencias, refreshEventos])
 
   // Converter items consolidados para formato do EventCard
@@ -1474,7 +1476,7 @@ export default function AgendaPage() {
                   setTarefaModalOpen(true)
                 }}
                 onTaskComplete={handleCompleteTask}
-                refreshKey={kanbanRefreshKey}
+                refreshKey={agendaRefreshKey}
                 viewMode={viewMode}
                 onViewModeChange={setViewMode}
                 onCreate={(tipo) => handleCreateEvent(undefined, tipo)}
@@ -1550,6 +1552,7 @@ export default function AgendaPage() {
                 onRescheduleEvento={handleEventMove}
                 onProcessoClick={handleProcessoClick}
                 onConsultivoClick={handleConsultivoClick}
+                refreshKey={agendaRefreshKey}
               />
             )}
           </>

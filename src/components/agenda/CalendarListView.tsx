@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   Select,
   SelectContent,
@@ -47,6 +47,10 @@ interface CalendarListViewProps {
   onRescheduleEvento?: (eventoId: string, newDate: Date) => void
   onProcessoClick?: (processoId: string) => void
   onConsultivoClick?: (consultivoId: string) => void
+  // Sinal de recarga vindo da página: incrementa após cada ação (reagendar,
+  // concluir, etc.) e força esta visão a refetchar (instância própria de
+  // useAgendaConsolidada, separada da página). Mesmo padrão do Kanban.
+  refreshKey?: number
   className?: string
 }
 
@@ -90,6 +94,7 @@ export default function CalendarListView({
   onRescheduleEvento,
   onProcessoClick,
   onConsultivoClick,
+  refreshKey,
   className,
 }: CalendarListViewProps) {
   const [periodoSelecionado, setPeriodoSelecionado] = useState('proximos-7d')
@@ -127,7 +132,23 @@ export default function CalendarListView({
   )
 
   // Carregar dados COM filtro de escritorio (seguranca) + janela de datas
-  const { items, loading } = useAgendaConsolidada(escritorioId, agendaFilters)
+  const { items, loading, refreshItems } = useAgendaConsolidada(escritorioId, agendaFilters)
+
+  // Recarrega quando a página sinaliza uma mudança (reagendar, concluir, etc.).
+  // Esta visão tem instância própria de useAgendaConsolidada, separada da
+  // página — sem isto, ações ficam só visíveis após "recarregar a página".
+  // Pula o 1º render p/ não duplicar a busca inicial (o hook já busca sozinho),
+  // igual ao Kanban (CalendarKanbanView).
+  const refreshKeyInicialRef = useRef(true)
+  useEffect(() => {
+    if (refreshKeyInicialRef.current) {
+      refreshKeyInicialRef.current = false
+      return
+    }
+    refreshItems()
+    // refreshItems não é memoizado; depender só de refreshKey evita loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   // Filtrar items (período + usuário + tipo + esconder concluídos no futuro)
   const itemsFiltrados = useMemo(() => {

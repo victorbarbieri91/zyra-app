@@ -237,7 +237,7 @@ export default function AgendaTimelineRow({
               <div className="flex-1 min-w-0 flex flex-col gap-1">
                 <div className="flex items-center gap-2 min-w-0">
                   <span
-                    className="inline-flex items-center h-[21px] px-2 rounded-md text-[10.5px] font-bold text-white whitespace-nowrap flex-shrink-0"
+                    className="inline-flex items-center h-[20px] px-2 rounded-md text-[10.5px] font-bold leading-none text-white whitespace-nowrap flex-shrink-0"
                     style={{ backgroundColor: tipo.badge }}
                   >
                     {tipo.label}

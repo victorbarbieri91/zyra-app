@@ -259,7 +259,7 @@ export default function CalendarListView({
   const periodoTriggerCls = 'w-auto h-9 gap-2 rounded-[10px] border-[#e6e3da] dark:border-[#253345] bg-white dark:bg-[#151e2b] text-[13px] font-semibold text-[#34495e] dark:text-[#d8e2ef] focus:ring-0 focus:ring-offset-0'
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
+    <div className={cn('flex flex-col gap-3 h-[calc(100vh-150px)] md:h-[calc(100vh-112px)]', className)}>
       {/* Barra única (design): período · visualizações · criar */}
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] items-center gap-4">
         {/* esquerda: título do período + "a partir de…" */}
@@ -339,7 +339,7 @@ export default function CalendarListView({
       {/* Lista por dia (timeline). Scroll com div comum (não ScrollArea/Radix):
           o layout de tabela do Radix quebra o `truncate` do título e estoura a
           largura, empurrando os botões para fora da tela. */}
-      <div className="overflow-y-auto overflow-x-hidden h-[calc(100vh-235px)] pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden pr-1">
         <div className="flex flex-col gap-6 pb-6 min-w-0">
           {loading && (
             <div className="flex items-center justify-center py-12 text-[#5a6775] dark:text-[#8a97a8]">

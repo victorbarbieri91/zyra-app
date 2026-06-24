@@ -539,7 +539,7 @@ export default function CalendarGridDnD({
               <div
                 key={label}
                 className={cn(
-                  'py-2.5 px-2 text-[10.5px] font-bold uppercase tracking-[0.08em] bg-[#faf8f2] dark:bg-[#0f141c]',
+                  'py-1.5 px-2 text-[10.5px] font-bold uppercase tracking-[0.08em] bg-[#faf8f2] dark:bg-[#0f141c]',
                   i === 0 || i === 6 ? 'text-[#9aa1a8] dark:text-[#5a6675]' : 'text-[#5a6775] dark:text-[#8a97a8]',
                 )}
               >
@@ -551,8 +551,8 @@ export default function CalendarGridDnD({
           {/* semanas */}
           {weeks.map((week, wi) => {
             const isCurrentWeek = wi === currentWeekIndex
-            const max = isCurrentWeek ? 6 : 3
-            const minHeight = isCurrentWeek ? 252 : 124
+            const max = isCurrentWeek ? 5 : 3
+            const minHeight = isCurrentWeek ? 184 : 130
             const flexGrow = isCurrentWeek ? 1.9 : 1
             return (
               <div

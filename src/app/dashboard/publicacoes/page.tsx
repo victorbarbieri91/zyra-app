@@ -1,54 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import Link from 'next/link'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import {
-  Filter,
-  Search,
-  Settings,
-  Archive,
-  CheckCircle2,
-  Clock,
-  FileX,
-  Calendar,
-  Loader2,
-  CalendarPlus,
-  CheckSquare,
-  Gavel,
-  FolderPlus,
-  ListChecks,
-  X,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink,
-  Undo2,
-  MessageSquare
-} from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { cn } from '@/lib/utils'
-import MetricCard from '@/components/dashboard/MetricCard'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { toast } from 'sonner'
@@ -59,111 +12,51 @@ import ProcessoWizard from '@/components/processos/ProcessoWizard'
 import { BuscaCNJModal } from '@/components/processos/BuscaCNJModal'
 import ProcessoWizardAutomatico from '@/components/processos/ProcessoWizardAutomatico'
 import type { ProcessoEscavadorNormalizado } from '@/lib/escavador/types'
-import PublicacaoExpandedRow from '@/components/publicacoes/PublicacaoExpandedRow'
-
-// Tipos
-type StatusPublicacao = 'pendente' | 'em_analise' | 'processada' | 'arquivada'
-type TipoPublicacao = 'intimacao' | 'sentenca' | 'despacho' | 'decisao' | 'acordao' | 'citacao' | 'outro'
-
-interface Publicacao {
-  id: string
-  data_publicacao: string
-  tribunal: string
-  vara?: string
-  tipo_publicacao: TipoPublicacao
-  numero_processo?: string
-  processo_id?: string
-  processo_autor?: string
-  processo_reu?: string
-  status: StatusPublicacao
-  agendamento_id?: string
-  agendamento_tipo?: 'tarefa' | 'compromisso' | 'audiencia'
-  hash_conteudo?: string
-  duplicata_revisada?: boolean
-  is_snippet?: boolean
-  updated_at?: string
-  created_at?: string
-  source?: string
-  escritorio_id?: string
-  comentarios_count?: number
-}
-
-interface Stats {
-  pendentes: number
-  processadasHoje: number
-  prazosCriados: number
-  comProcesso: number
-  semProcesso: number
-  tratadas: number
-  arquivadas: number
-  total: number
-}
-
-type AbaPublicacoes = 'todas' | 'com_processo' | 'sem_processo' | 'tratadas' | 'arquivadas'
+import PublicacoesRail from '@/components/publicacoes/PublicacoesRail'
+import PublicacaoDetalhe from '@/components/publicacoes/PublicacaoDetalhe'
+import { type Publicacao, type AbaPub, tipoLabel } from '@/components/publicacoes/publicacoes-ui'
 
 export default function PublicacoesPage() {
-  const [filtros, setFiltros] = useState({
-    busca: '',
-    status: 'todos',
-    tipo: 'todos',
-    semPasta: false
-  })
   const [publicacoes, setPublicacoes] = useState<Publicacao[]>([])
-  const [stats, setStats] = useState<Stats>({
-    pendentes: 0,
-    processadasHoje: 0,
-    prazosCriados: 0,
-    comProcesso: 0,
-    semProcesso: 0,
-    tratadas: 0,
-    arquivadas: 0,
-    total: 0
-  })
   const [carregando, setCarregando] = useState(true)
-  const [abaAtiva, setAbaAtiva] = useState<AbaPublicacoes>('todas')
+  const [abaAtiva, setAbaAtiva] = useState<AbaPub>('pendentes')
+  const [busca, setBusca] = useState('')
+  const [selId, setSelId] = useState<string | null>(null)
+  const [conversaAberta, setConversaAberta] = useState(true)
+  const [ultimaSync, setUltimaSync] = useState<string | null>(null)
 
   // Seleção em massa
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
-  const [mostrarFiltrosAvancados, setMostrarFiltrosAvancados] = useState(false)
-  const [buscaInline, setBuscaInline] = useState('')
 
   // Wizards para ações rápidas
   const [wizardTarefa, setWizardTarefa] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
   const [wizardEvento, setWizardEvento] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
   const [wizardAudiencia, setWizardAudiencia] = useState<{ open: boolean; pub: Publicacao | null }>({ open: false, pub: null })
 
-  // Row expandida (single-expansion)
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  const expandedCacheRef = useRef<Map<string, { texto: string | null }>>(new Map())
-
-  // Estado para criação de processo (fluxo com busca automática)
+  // Criação/vínculo de processo
   const [buscaCNJModal, setBuscaCNJModal] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
   const [wizardProcessoAuto, setWizardProcessoAuto] = useState<{ open: boolean; dados: ProcessoEscavadorNormalizado | null }>({ open: false, dados: null })
   const [wizardProcessoManual, setWizardProcessoManual] = useState<{ open: boolean; cnj: string }>({ open: false, cnj: '' })
+
+  // Texto completo (carga sob demanda + cache)
+  const textoCacheRef = useRef<Map<string, string | null>>(new Map())
+  const [textoSel, setTextoSel] = useState<{ id: string; texto: string | null }>({ id: '', texto: null })
+  const [textoLoading, setTextoLoading] = useState(false)
 
   const router = useRouter()
   const supabase = createClient()
   const { escritorioAtivo } = useEscritorioAtivo()
 
-  // Toggle expand row
-  const toggleExpand = useCallback((id: string) => {
-    setExpandedId(prev => prev === id ? null : id)
-  }, [])
-
-  // Cache callback para lazy-load
-  const handleExpandedDataLoaded = useCallback((id: string, data: { texto: string | null }) => {
-    expandedCacheRef.current.set(id, data)
-  }, [])
-
-  // Carregar publicações do banco
+  // ========================================
+  // Carregar publicações
+  // ========================================
   const carregarPublicacoes = useCallback(async () => {
     if (!escritorioAtivo) return
-
     setCarregando(true)
     try {
       const { data: rawData, error } = await supabase
         .from('publicacoes_publicacoes')
-        .select(`id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, updated_at, created_at, escritorio_id, source, processos_processos!processo_id(autor, reu), publicacoes_comentarios(count)`)
+        .select(`id, data_publicacao, tribunal, vara, tipo_publicacao, numero_processo, processo_id, status, agendamento_id, agendamento_tipo, hash_conteudo, duplicata_revisada, is_snippet, partes, pdf_url, updated_at, created_at, escritorio_id, source, processos_processos!processo_id(autor, reu), publicacoes_comentarios(count)`)
         .eq('escritorio_id', escritorioAtivo)
         .neq('status', 'duplicada')
         .order('data_publicacao', { ascending: false })
@@ -175,76 +68,76 @@ export default function PublicacoesPage() {
         return
       }
 
-      // Mapear dados do JOIN para campos planos
       const data = (rawData || []).map((d: any) => ({
         ...d,
         processo_autor: d.processos_processos?.autor || undefined,
         processo_reu: d.processos_processos?.reu || undefined,
         comentarios_count: d.publicacoes_comentarios?.[0]?.count || 0,
+        resumo: null as string | null,
+        partes: d.partes ?? null,
+        pdf_url: d.pdf_url ?? null,
         processos_processos: undefined,
         publicacoes_comentarios: undefined,
       }))
 
-      // Auto-deduplicação: agrupar por hash e manter apenas a mais recente de cada grupo
-      const publicacoesUnicas = dedupPublicacoes(data)
-      setPublicacoes(publicacoesUnicas)
+      // Resumo da análise (snippet da lista) — best-effort, não bloqueia a carga
+      const ids = data.map((d: any) => d.id)
+      if (ids.length > 0) {
+        const { data: analises } = await supabase
+          .from('publicacoes_analises')
+          .select('publicacao_id, resumo_executivo')
+          .eq('escritorio_id', escritorioAtivo)
+          .in('publicacao_id', ids)
+        const resumoMap = new Map<string, string>()
+        ;(analises || []).forEach((a: { publicacao_id: string; resumo_executivo: string | null }) => {
+          if (a.resumo_executivo) resumoMap.set(a.publicacao_id, a.resumo_executivo)
+        })
+        data.forEach((d: any) => { d.resumo = resumoMap.get(d.id) ?? null })
+      }
 
-      // Calcular estatísticas
-      const hoje = new Date().toISOString().split('T')[0]
-      // Ativas = pendentes ou em_analise (não tratadas nem arquivadas)
-      const ativas = publicacoesUnicas.filter(p => p.status !== 'arquivada' && p.status !== 'processada')
-      const pendentes = ativas.filter(p => p.status === 'pendente').length
-      // Tratadas hoje = processadas hoje
-      const processadasHoje = publicacoesUnicas.filter(p => p.status === 'processada' && p.updated_at?.startsWith(hoje)).length
-      const comProcesso = ativas.filter(p => p.processo_id).length
-      const semProcesso = ativas.filter(p => !p.processo_id && p.numero_processo).length
-      const tratadas = publicacoesUnicas.filter(p => p.status === 'processada').length
-      const arquivadas = publicacoesUnicas.filter(p => p.status === 'arquivada').length
-
-      setStats({
-        pendentes,
-        processadasHoje,
-        prazosCriados: 0,
-        comProcesso,
-        semProcesso,
-        tratadas,
-        arquivadas,
-        total: ativas.length
-      })
+      setPublicacoes(dedupPublicacoes(data))
     } finally {
       setCarregando(false)
     }
   }, [escritorioAtivo, supabase])
 
-  // Auto-deduplicação inteligente
+  // Última sincronização (para "sincronizado há X min")
+  const carregarUltimaSync = useCallback(async () => {
+    if (!escritorioAtivo) return
+    const { data } = await supabase
+      .from('publicacoes_sincronizacoes')
+      .select('created_at, data_fim')
+      .eq('escritorio_id', escritorioAtivo)
+      .eq('sucesso', true)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    const row = data as { created_at?: string | null; data_fim?: string | null } | null
+    setUltimaSync(row?.data_fim || row?.created_at || null)
+  }, [escritorioAtivo, supabase])
+
+  // Auto-deduplicação inteligente (mantém a versão de maior prioridade por grupo)
   const dedupPublicacoes = (pubs: any[]): Publicacao[] => {
     const grupos = new Map<string, any[]>()
-
     pubs.forEach(pub => {
-      // Criar chave de deduplicação: hash OU (numero_processo + data + tipo)
       let chave = pub.hash_conteudo
       if (!chave && pub.numero_processo && pub.data_publicacao) {
         chave = `${pub.numero_processo}-${pub.data_publicacao}-${pub.tipo_publicacao || 'outro'}`
       }
-
       if (chave) {
         const grupo = grupos.get(chave) || []
         grupo.push(pub)
         grupos.set(chave, grupo)
       } else {
-        // Sem chave de deduplicação, adicionar direto
         grupos.set(pub.id, [pub])
       }
     })
 
-    // De cada grupo, manter a mais recente (ou a que já foi processada)
     const resultado: Publicacao[] = []
     grupos.forEach((grupo) => {
       if (grupo.length === 1) {
         resultado.push(grupo[0])
       } else {
-        // Priorizar: processada > em_analise > pendente > arquivada
-        // Se mesmo status, pegar a mais recente
         const ordenado = grupo.sort((a, b) => {
           const prioridade = { processada: 1, em_analise: 2, pendente: 3, arquivada: 4 }
           const prioA = prioridade[a.status as keyof typeof prioridade] || 5
@@ -255,133 +148,132 @@ export default function PublicacoesPage() {
         resultado.push(ordenado[0])
       }
     })
-
     return resultado
   }
 
   useEffect(() => {
     carregarPublicacoes()
-  }, [carregarPublicacoes])
+    carregarUltimaSync()
+  }, [carregarPublicacoes, carregarUltimaSync])
 
-  // Limpar todos os filtros
-  const limparFiltros = () => {
-    setFiltros({ busca: '', status: 'todos', tipo: 'todos', semPasta: false })
-    setBuscaInline('')
-  }
-
-  // Filtrar publicações
+  // ========================================
+  // Filtro por aba + busca, e contadores
+  // ========================================
   const publicacoesFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase()
     return publicacoes.filter(pub => {
-      // Filtro por aba
       if (abaAtiva === 'tratadas') {
         if (pub.status !== 'processada') return false
       } else if (abaAtiva === 'arquivadas') {
         if (pub.status !== 'arquivada') return false
+      } else if (abaAtiva === 'pendentes') {
+        if (pub.status === 'processada' || pub.status === 'arquivada') return false
       } else {
-        // Nas abas ativas, não mostrar tratadas, arquivadas nem duplicadas
-        if (['processada', 'arquivada', 'duplicada'].includes(pub.status)) return false
-
-        if (abaAtiva === 'com_processo' && !pub.processo_id) return false
-        if (abaAtiva === 'sem_processo' && pub.processo_id) return false
+        // todas (ativas) = tudo menos arquivada
+        if (pub.status === 'arquivada') return false
       }
 
-      // Filtros adicionais (busca inline + busca avançada)
-      const termoBusca = (buscaInline || filtros.busca).toLowerCase()
-      if (termoBusca) {
-        const matchBusca =
-          pub.numero_processo?.toLowerCase().includes(termoBusca) ||
-          pub.tribunal?.toLowerCase().includes(termoBusca) ||
-          pub.vara?.toLowerCase().includes(termoBusca) ||
-          pub.processo_autor?.toLowerCase().includes(termoBusca) ||
-          pub.processo_reu?.toLowerCase().includes(termoBusca)
-        if (!matchBusca) return false
+      if (termo) {
+        const hay = [
+          pub.numero_processo, pub.tribunal, pub.vara,
+          pub.processo_autor, pub.processo_reu, (pub.partes || []).join(' '),
+        ].filter(Boolean).join(' ').toLowerCase()
+        if (!hay.includes(termo)) return false
       }
-      // Não aplicar filtro de status nas abas de status fixo
-      if (!['tratadas', 'arquivadas'].includes(abaAtiva) && filtros.status !== 'todos' && pub.status !== filtros.status) return false
-      if (filtros.tipo !== 'todos' && pub.tipo_publicacao !== filtros.tipo) return false
-      if (filtros.semPasta && pub.processo_id) return false
-      if (filtros.semPasta && !pub.numero_processo) return false // Precisa ter número mas não ter pasta
       return true
     })
-  }, [publicacoes, filtros, abaAtiva, buscaInline])
+  }, [publicacoes, abaAtiva, busca])
 
-  // Keyboard shortcuts para triagem rápida
+  const counts = useMemo(() => ({
+    pendentes: publicacoes.filter(p => p.status !== 'processada' && p.status !== 'arquivada').length,
+    tratadas: publicacoes.filter(p => p.status === 'processada').length,
+    todas: publicacoes.filter(p => p.status !== 'arquivada').length,
+    arquivadas: publicacoes.filter(p => p.status === 'arquivada').length,
+  }), [publicacoes])
+
+  const selectedPub = useMemo(
+    () => publicacoes.find(p => p.id === selId) || null,
+    [publicacoes, selId]
+  )
+
+  // Selecionar automaticamente a primeira da lista quando a seleção fica inválida
+  useEffect(() => {
+    if (publicacoesFiltradas.length === 0) {
+      if (selId !== null) setSelId(null)
+      return
+    }
+    if (!selId || !publicacoesFiltradas.some(p => p.id === selId)) {
+      setSelId(publicacoesFiltradas[0].id)
+    }
+  }, [publicacoesFiltradas, selId])
+
+  // Carregar texto completo da publicação selecionada (lazy + cache)
+  useEffect(() => {
+    if (!selId || !escritorioAtivo) return
+    const cached = textoCacheRef.current.get(selId)
+    if (cached !== undefined) {
+      setTextoSel({ id: selId, texto: cached })
+      return
+    }
+    let cancel = false
+    setTextoLoading(true)
+    ;(async () => {
+      const { data } = await supabase
+        .from('publicacoes_publicacoes')
+        .select('texto_completo')
+        .eq('id', selId)
+        .eq('escritorio_id', escritorioAtivo)
+        .maybeSingle()
+      const txt = (data as { texto_completo?: string | null } | null)?.texto_completo ?? null
+      textoCacheRef.current.set(selId, txt)
+      if (!cancel) {
+        setTextoSel({ id: selId, texto: txt })
+        setTextoLoading(false)
+      }
+    })()
+    return () => { cancel = true }
+  }, [selId, escritorioAtivo, supabase])
+
+  // Navegação por teclado (↑/↓ navega a seleção)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Não interferir com inputs/textareas
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
-      // Não interferir se modal/wizard estiver aberto
       if (wizardTarefa.open || wizardEvento.open || wizardAudiencia.open || buscaCNJModal.open) return
+      if (!selId || (e.key !== 'ArrowDown' && e.key !== 'ArrowUp')) return
 
-      if (e.key === 'Escape' && expandedId) {
-        e.preventDefault()
-        setExpandedId(null)
-        return
-      }
-
-      if (expandedId && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
-        e.preventDefault()
-        const currentIdx = publicacoesFiltradas.findIndex(p => p.id === expandedId)
-        if (currentIdx === -1) return
-
-        const nextIdx = e.key === 'ArrowDown'
-          ? Math.min(currentIdx + 1, publicacoesFiltradas.length - 1)
-          : Math.max(currentIdx - 1, 0)
-
-        if (nextIdx !== currentIdx) {
-          setExpandedId(publicacoesFiltradas[nextIdx].id)
-        }
-      }
+      e.preventDefault()
+      const idx = publicacoesFiltradas.findIndex(p => p.id === selId)
+      if (idx === -1) return
+      const next = e.key === 'ArrowDown'
+        ? Math.min(idx + 1, publicacoesFiltradas.length - 1)
+        : Math.max(idx - 1, 0)
+      if (next !== idx) setSelId(publicacoesFiltradas[next].id)
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [expandedId, publicacoesFiltradas, wizardTarefa.open, wizardEvento.open, wizardAudiencia.open, buscaCNJModal.open])
-
-  // Verificar se há filtros ativos
-  const temFiltrosAtivos = buscaInline || filtros.busca || filtros.status !== 'todos' || filtros.tipo !== 'todos' || filtros.semPasta
+  }, [selId, publicacoesFiltradas, wizardTarefa.open, wizardEvento.open, wizardAudiencia.open, buscaCNJModal.open])
 
   // ========================================
-  // Seleção em Massa
+  // Seleção em massa
   // ========================================
-
   const toggleSelecao = (id: string) => {
-    const novoSet = new Set(selecionados)
-    if (novoSet.has(id)) {
-      novoSet.delete(id)
-    } else {
-      novoSet.add(id)
-    }
-    setSelecionados(novoSet)
+    setSelecionados(prev => {
+      const novo = new Set(prev)
+      if (novo.has(id)) novo.delete(id)
+      else novo.add(id)
+      return novo
+    })
   }
-
-  const selecionarTodos = () => {
-    if (selecionados.size === publicacoesFiltradas.length) {
-      setSelecionados(new Set())
-    } else {
-      setSelecionados(new Set(publicacoesFiltradas.map(p => p.id)))
-    }
-  }
-
-  const limparSelecao = () => {
-    setSelecionados(new Set())
-  }
-
-  // ========================================
-  // Ações em Massa
-  // ========================================
+  const limparSelecao = () => setSelecionados(new Set())
 
   const arquivarSelecionados = async () => {
     if (selecionados.size === 0) return
-
     try {
       const { error } = await supabase
         .from('publicacoes_publicacoes')
         .update({ status: 'arquivada' })
         .in('id', Array.from(selecionados))
-
       if (error) throw error
-
       toast.success(`${selecionados.size} publicação(ões) arquivada(s)`)
       limparSelecao()
       await carregarPublicacoes()
@@ -393,15 +285,12 @@ export default function PublicacoesPage() {
 
   const voltarParaPendenteMassa = async () => {
     if (selecionados.size === 0) return
-
     try {
       const { error } = await supabase
         .from('publicacoes_publicacoes')
         .update({ status: 'pendente' })
         .in('id', Array.from(selecionados))
-
       if (error) throw error
-
       toast.success(`${selecionados.size} publicação(ões) voltou(aram) para pendente`)
       limparSelecao()
       await carregarPublicacoes()
@@ -413,15 +302,12 @@ export default function PublicacoesPage() {
 
   const marcarComoProcessada = async () => {
     if (selecionados.size === 0) return
-
     try {
       const { error } = await supabase
         .from('publicacoes_publicacoes')
         .update({ status: 'processada' })
         .in('id', Array.from(selecionados))
-
       if (error) throw error
-
       toast.success(`${selecionados.size} publicação(ões) marcada(s) como tratada(s)`)
       limparSelecao()
       await carregarPublicacoes()
@@ -432,34 +318,21 @@ export default function PublicacoesPage() {
   }
 
   // ========================================
-  // Ações Individuais
+  // Ações individuais (com auto-avanço da seleção)
   // ========================================
+  const proximaSelecao = (id: string): string | null => {
+    const idx = publicacoesFiltradas.findIndex(p => p.id === id)
+    const prox = publicacoesFiltradas.find((p, i) => i > idx && p.status !== 'processada' && p.status !== 'arquivada')
+    return prox ? prox.id : null
+  }
 
-  const arquivarPublicacao = async (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-
-    // Capturar próxima publicação pendente ANTES de atualizar
-    const pubAtual = publicacoesFiltradas.findIndex(p => p.id === id)
-    const proximaPendente = publicacoesFiltradas.find((p, i) =>
-      i > pubAtual && p.status !== 'processada' && p.status !== 'arquivada'
-    )
-
+  const arquivarPublicacao = async (id: string) => {
+    const prox = proximaSelecao(id)
     try {
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ status: 'arquivada' })
-        .eq('id', id)
-
+      const { error } = await supabase.from('publicacoes_publicacoes').update({ status: 'arquivada' }).eq('id', id)
       if (error) throw error
       toast.success('Publicação arquivada')
-
-      // Auto-advance
-      if (expandedId === id && proximaPendente) {
-        setExpandedId(proximaPendente.id)
-      } else if (expandedId === id) {
-        setExpandedId(null)
-      }
-
+      if (selId === id) setSelId(prox)
       await carregarPublicacoes()
     } catch (err) {
       console.error('Erro ao arquivar:', err)
@@ -467,31 +340,13 @@ export default function PublicacoesPage() {
     }
   }
 
-  const marcarProcessada = async (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-
-    // Capturar próxima publicação pendente ANTES de atualizar
-    const pubAtual = publicacoesFiltradas.findIndex(p => p.id === id)
-    const proximaPendente = publicacoesFiltradas.find((p, i) =>
-      i > pubAtual && p.status !== 'processada' && p.status !== 'arquivada'
-    )
-
+  const marcarProcessada = async (id: string) => {
+    const prox = proximaSelecao(id)
     try {
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ status: 'processada' })
-        .eq('id', id)
-
+      const { error } = await supabase.from('publicacoes_publicacoes').update({ status: 'processada' }).eq('id', id)
       if (error) throw error
       toast.success('Publicação marcada como tratada')
-
-      // Auto-advance: expandir próxima publicação pendente
-      if (expandedId === id && proximaPendente) {
-        setExpandedId(proximaPendente.id)
-      } else if (expandedId === id) {
-        setExpandedId(null)
-      }
-
+      if (selId === id) setSelId(prox)
       await carregarPublicacoes()
     } catch (err) {
       console.error('Erro ao atualizar:', err)
@@ -499,18 +354,11 @@ export default function PublicacoesPage() {
     }
   }
 
-  const voltarParaPendente = async (id: string, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-
+  const voltarParaPendente = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ status: 'pendente' })
-        .eq('id', id)
-
+      const { error } = await supabase.from('publicacoes_publicacoes').update({ status: 'pendente' }).eq('id', id)
       if (error) throw error
       toast.success('Publicação voltou para pendente')
-
       await carregarPublicacoes()
     } catch (err) {
       console.error('Erro ao atualizar:', err)
@@ -518,48 +366,28 @@ export default function PublicacoesPage() {
     }
   }
 
-  // Funções para abrir wizards com dados da publicação
-  const abrirWizardTarefa = (pub: Publicacao, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    setWizardTarefa({ open: true, pub })
-  }
+  // ========================================
+  // Wizards (agendar) e criação de processo
+  // ========================================
+  const abrirWizardTarefa = (pub: Publicacao) => setWizardTarefa({ open: true, pub })
+  const abrirWizardEvento = (pub: Publicacao) => setWizardEvento({ open: true, pub })
+  const abrirWizardAudiencia = (pub: Publicacao) => setWizardAudiencia({ open: true, pub })
+  const abrirWizardProcesso = (cnj: string) => setBuscaCNJModal({ open: true, cnj })
 
-  const abrirWizardEvento = (pub: Publicacao, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    setWizardEvento({ open: true, pub })
-  }
-
-  const abrirWizardAudiencia = (pub: Publicacao, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    setWizardAudiencia({ open: true, pub })
-  }
-
-  const abrirWizardProcesso = (cnj: string, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-    // Abre o modal de busca por CNJ com o número já preenchido
-    setBuscaCNJModal({ open: true, cnj })
-  }
-
-  // Handlers para o fluxo de criação de processo
   const handleDadosEncontrados = (dados: ProcessoEscavadorNormalizado) => {
     setBuscaCNJModal({ open: false, cnj: '' })
     setWizardProcessoAuto({ open: true, dados })
   }
-
   const handleCadastroManual = () => {
     const cnj = buscaCNJModal.cnj
     setBuscaCNJModal({ open: false, cnj: '' })
     setWizardProcessoManual({ open: true, cnj })
   }
 
-  // Gerar dados iniciais para os wizards baseado na publicação
-  // Buscar texto do cache expandido se disponível
-  const getTextoCache = (pubId: string) => {
-    return expandedCacheRef.current.get(pubId)?.texto?.substring(0, 500) || ''
-  }
+  const getTextoCache = (pubId: string) => textoCacheRef.current.get(pubId)?.substring(0, 500) || ''
 
   const getInitialDataTarefa = (pub: Publicacao) => ({
-    titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
+    titulo: `${tipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
     descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${getTextoCache(pub.id)}`,
     processo_id: pub.processo_id || undefined,
     tipo: 'outro' as const,
@@ -567,7 +395,7 @@ export default function PublicacoesPage() {
   })
 
   const getInitialDataEvento = (pub: Publicacao) => ({
-    titulo: `${getTipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
+    titulo: `${tipoLabel(pub.tipo_publicacao)} - ${pub.numero_processo || 'Publicação'}`,
     descricao: `Publicação: ${pub.tipo_publicacao?.toUpperCase() || 'PUBLICAÇÃO'}\nData: ${new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}\nTribunal: ${pub.tribunal}\n${pub.numero_processo ? `Processo: ${pub.numero_processo}\n` : ''}\n---\n${getTextoCache(pub.id)}`,
     processo_id: pub.processo_id || undefined,
   })
@@ -580,10 +408,7 @@ export default function PublicacoesPage() {
     vara: pub.vara || '',
   })
 
-  // Após o wizard criar a entidade, fecha os vínculos:
-  //  • Resolve processo_id da publicação (cai no match por CNJ se ainda NULL)
-  //  • Garante que a entidade criada (tarefa/evento/audiência) também aponte para o processo
-  //  • Atualiza a publicação com agendamento_id/tipo/status (e processo_id se foi resolvido agora)
+  // Após o wizard criar a entidade: vincula processo (por CNJ) e marca a publicação como tratada
   const vincularPublicacaoAposCriacao = async (
     pub: Publicacao,
     entidade: { id?: string; processo_id?: string | null } | undefined,
@@ -623,830 +448,59 @@ export default function PublicacoesPage() {
     if (error) console.error('Erro ao atualizar publicação após agendamento:', error)
   }
 
-  // Registrar na pasta do processo
-  const registrarNaPasta = async (pub: Publicacao, e?: React.MouseEvent) => {
-    e?.stopPropagation()
-
-    if (!pub.processo_id) {
-      toast.error('Publicação não está vinculada a um processo')
-      return
-    }
-
-    try {
-      // Marcar como processada (tratada) automaticamente ao registrar na pasta
-      const { error } = await supabase
-        .from('publicacoes_publicacoes')
-        .update({ status: 'processada' })
-        .eq('id', pub.id)
-
-      if (error) throw error
-
-      toast.success('Publicação registrada na pasta e marcada como tratada')
-      await carregarPublicacoes()
-    } catch (err) {
-      console.error('Erro ao registrar:', err)
-      toast.error('Erro ao registrar na pasta')
-    }
-  }
-
-  const getStatusBadge = (status: StatusPublicacao) => {
-    const variants = {
-      pendente: 'bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/50',
-      em_analise: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/50',
-      processada: 'bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300 dark:border-emerald-700/50',
-      arquivada: 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800/50 dark:text-slate-400 dark:border-slate-600/50'
-    }
-
-    const labels = {
-      pendente: 'Pendente',
-      em_analise: 'Em Análise',
-      processada: 'Tratada',
-      arquivada: 'Arquivada'
-    }
-
-    return (
-      <Badge variant="outline" className={cn('text-[10px] font-medium border', variants[status])}>
-        {labels[status]}
-      </Badge>
-    )
-  }
-
-  const getTipoLabel = (tipo: TipoPublicacao) => {
-    const labels: Record<TipoPublicacao, string> = {
-      intimacao: 'Intimação',
-      sentenca: 'Sentença',
-      despacho: 'Despacho',
-      decisao: 'Decisão',
-      acordao: 'Acórdão',
-      citacao: 'Citação',
-      outro: 'Outro'
-    }
-    return labels[tipo] || tipo
-  }
-
+  // ========================================
+  // Render
+  // ========================================
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 dark:from-surface-0 to-white dark:to-surface-0 p-4 md:p-6">
-      {/* Header */}
-      <div className="mb-4 md:mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <div>
-            <h1 className="text-xl md:text-2xl font-bold text-[#34495e] dark:text-slate-200">Publicações</h1>
-            <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Gestão de publicações e intimações</p>
-          </div>
+    <div className="flex h-[calc(100vh-56px)] md:h-[calc(100vh-64px)] overflow-hidden bg-[#fafaf7] dark:bg-[#0b0f14]">
+      <PublicacoesRail
+        lista={publicacoesFiltradas}
+        tab={abaAtiva}
+        onTab={setAbaAtiva}
+        counts={counts}
+        busca={busca}
+        onBusca={setBusca}
+        selId={selId}
+        onSelect={setSelId}
+        selecionados={selecionados}
+        onToggleSelecao={toggleSelecao}
+        onLimparSelecao={limparSelecao}
+        onBulkTratar={marcarComoProcessada}
+        onBulkArquivar={arquivarSelecionados}
+        onBulkVoltar={voltarParaPendenteMassa}
+        onTratarItem={marcarProcessada}
+        onPrazoItem={abrirWizardTarefa}
+        onArquivarItem={arquivarPublicacao}
+        ultimaSync={ultimaSync}
+        onConfig={() => router.push('/dashboard/publicacoes/config')}
+      />
 
-          <Link href="/dashboard/publicacoes/config">
-            <Button variant="outline" size="sm" className="gap-1.5">
-              <Settings className="w-4 h-4" />
-              <span className="hidden md:inline">Configurações</span>
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      {/* KPI Cards - Compact */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-4">
-        <MetricCard
-          title="Pendentes"
-          value={stats.pendentes}
-          subtitle="Aguardando análise"
-          icon={Clock}
-          gradient="kpi1"
-          compact
+      {selectedPub && escritorioAtivo ? (
+        <PublicacaoDetalhe
+          pub={selectedPub}
+          texto={textoSel.id === selId ? textoSel.texto : null}
+          textoLoading={textoLoading && textoSel.id !== selId}
+          escritorioId={escritorioAtivo}
+          conversaAberta={conversaAberta}
+          onToggleConversa={() => setConversaAberta(o => !o)}
+          onAgendarTarefa={() => abrirWizardTarefa(selectedPub)}
+          onAgendarEvento={() => abrirWizardEvento(selectedPub)}
+          onAgendarAudiencia={() => abrirWizardAudiencia(selectedPub)}
+          onAbrirProcesso={() => selectedPub.processo_id && router.push(`/dashboard/processos/${selectedPub.processo_id}`)}
+          onVincular={() => selectedPub.numero_processo && abrirWizardProcesso(selectedPub.numero_processo)}
+          onArquivar={() => arquivarPublicacao(selectedPub.id)}
+          onTratar={() => marcarProcessada(selectedPub.id)}
+          onVoltarPendente={() => voltarParaPendente(selectedPub.id)}
+          onCopiar={() => {
+            const t = textoSel.id === selId ? textoSel.texto : null
+            if (t) { navigator.clipboard?.writeText(t); toast.success('Texto copiado') }
+          }}
         />
-        <MetricCard
-          title="Tratadas Hoje"
-          value={stats.processadasHoje}
-          subtitle="Nas últimas 24h"
-          icon={CheckCircle2}
-          gradient="kpi2"
-          compact
-        />
-        <MetricCard
-          title="Tratadas"
-          value={stats.tratadas}
-          subtitle="Total processadas"
-          icon={CheckSquare}
-          gradient="kpi3"
-          compact
-        />
-        <MetricCard
-          title="Prazos Criados"
-          value={stats.prazosCriados}
-          subtitle="A partir de publicações"
-          icon={Calendar}
-          gradient="kpi4"
-          compact
-        />
-      </div>
-
-      {/* Filtros Avançados (colapsável) */}
-      {mostrarFiltrosAvancados && (
-        <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 p-4 mb-4 shadow-sm">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-9 justify-between">
-                  <span className="text-sm">
-                    {filtros.status === 'todos' ? 'Status' :
-                      filtros.status === 'pendente' ? 'Pendente' :
-                      filtros.status === 'em_analise' ? 'Em Análise' :
-                      filtros.status === 'processada' ? 'Tratada' : 'Arquivada'}
-                  </span>
-                  <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1">
-                {[
-                  { value: 'todos', label: 'Todos os Status' },
-                  { value: 'pendente', label: 'Pendente' },
-                  { value: 'em_analise', label: 'Em Análise' },
-                  { value: 'processada', label: 'Tratada' },
-                  { value: 'arquivada', label: 'Arquivada' }
-                ].map(opt => (
-                  <Button
-                    key={opt.value}
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start h-8 text-sm',
-                      filtros.status === opt.value && 'bg-slate-100 dark:bg-surface-2'
-                    )}
-                    onClick={() => setFiltros({ ...filtros, status: opt.value })}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </PopoverContent>
-            </Popover>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="h-9 justify-between">
-                  <span className="text-sm">
-                    {filtros.tipo === 'todos' ? 'Tipo' : getTipoLabel(filtros.tipo as TipoPublicacao)}
-                  </span>
-                  <ChevronDown className="w-4 h-4 ml-2 opacity-50" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-48 p-1">
-                {[
-                  { value: 'todos', label: 'Todos os Tipos' },
-                  { value: 'intimacao', label: 'Intimação' },
-                  { value: 'sentenca', label: 'Sentença' },
-                  { value: 'despacho', label: 'Despacho' },
-                  { value: 'decisao', label: 'Decisão' },
-                  { value: 'acordao', label: 'Acórdão' },
-                  { value: 'citacao', label: 'Citação' },
-                  { value: 'outro', label: 'Outro' }
-                ].map(opt => (
-                  <Button
-                    key={opt.value}
-                    variant="ghost"
-                    className={cn(
-                      'w-full justify-start h-8 text-sm',
-                      filtros.tipo === opt.value && 'bg-slate-100 dark:bg-surface-2'
-                    )}
-                    onClick={() => setFiltros({ ...filtros, tipo: opt.value })}
-                  >
-                    {opt.label}
-                  </Button>
-                ))}
-              </PopoverContent>
-            </Popover>
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="sem-pasta"
-                checked={filtros.semPasta}
-                onCheckedChange={(checked) => setFiltros({ ...filtros, semPasta: !!checked })}
-              />
-              <label htmlFor="sem-pasta" className="text-sm text-slate-600 dark:text-slate-400 cursor-pointer">
-                Sem pasta vinculada
-              </label>
-            </div>
-          </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center text-[13px] text-[#9aa1a8] dark:text-[#5a6675]">
+          {carregando ? 'Carregando publicações…' : 'Selecione uma publicação'}
         </div>
       )}
-
-      {/* Barra de ações em massa (quando há seleção) */}
-      {selecionados.size > 0 && (
-        <div className="bg-[#34495e] text-white rounded-lg p-3 mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-2 shadow-lg">
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">
-              {selecionados.size} selecionada{selecionados.size > 1 ? 's' : ''}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-xs text-white/80 hover:text-white hover:bg-white/10"
-              onClick={limparSelecao}
-            >
-              Limpar
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={voltarParaPendenteMassa}
-            >
-              <Undo2 className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Voltar para</span> Pendente
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={marcarComoProcessada}
-            >
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">Marcar como</span> Tratada
-            </Button>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-8 gap-1.5"
-              onClick={arquivarSelecionados}
-            >
-              <Archive className="w-3.5 h-3.5" />
-              Arquivar
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Publicações */}
-      <div className="bg-white dark:bg-surface-1 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-        {/* Abas + Busca */}
-        <div className="p-3 md:p-4 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-            <div className="overflow-x-auto no-scrollbar">
-              <Tabs value={abaAtiva} onValueChange={(v) => setAbaAtiva(v as AbaPublicacoes)}>
-                <TabsList className="bg-slate-100 dark:bg-surface-2 p-1 h-9 w-max">
-                  <TabsTrigger
-                    value="todas"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-                  >
-                    Todas
-                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-600 dark:text-slate-400">
-                      {stats.total}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="com_processo"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-                  >
-                    <span className="hidden md:inline">Com Pasta</span>
-                    <span className="md:hidden">Pasta</span>
-                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#89bcbe]/30 text-[#34495e] dark:bg-[#89bcbe]/20 dark:text-[#89bcbe]">
-                      {stats.comProcesso}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="sem_processo"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-                  >
-                    <span className="hidden md:inline">Sem Pasta</span>
-                    <span className="md:hidden">S/ Pasta</span>
-                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-[#34495e]/10 text-[#46627f] dark:bg-slate-600/30 dark:text-slate-300">
-                      {stats.semProcesso}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="tratadas"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-                  >
-                    <span className="hidden md:inline">Tratadas</span>
-                    <span className="md:hidden">Trat.</span>
-                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-emerald-100/80 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                      {stats.tratadas}
-                    </Badge>
-                  </TabsTrigger>
-                  <TabsTrigger
-                    value="arquivadas"
-                    className="data-[state=active]:bg-white dark:data-[state=active]:bg-surface-3 data-[state=active]:text-[#34495e] dark:data-[state=active]:text-slate-100 data-[state=active]:shadow-sm px-2.5 md:px-3 text-xs md:text-sm h-7"
-                  >
-                    <span className="hidden md:inline">Arquivadas</span>
-                    <span className="md:hidden">Arq.</span>
-                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-[10px] bg-slate-200/80 dark:bg-surface-3 text-slate-500 dark:text-slate-400">
-                      {stats.arquivadas}
-                    </Badge>
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                <Input
-                  placeholder="Buscar cliente ou processo..."
-                  className="pl-8 h-8 text-xs"
-                  value={buscaInline}
-                  onChange={(e) => setBuscaInline(e.target.value)}
-                />
-                {buscaInline && (
-                  <button
-                    onClick={() => setBuscaInline('')}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-8 px-2 text-slate-500 dark:text-slate-400 shrink-0',
-                  mostrarFiltrosAvancados && 'bg-slate-100 dark:bg-surface-2 text-slate-700 dark:text-slate-200'
-                )}
-                onClick={() => setMostrarFiltrosAvancados(!mostrarFiltrosAvancados)}
-              >
-                <Filter className="w-3.5 h-3.5" />
-              </Button>
-              {temFiltrosAtivos && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-xs px-2 text-red-500 hover:text-red-600 hover:bg-red-50 shrink-0"
-                  onClick={limparFiltros}
-                >
-                  <X className="w-3.5 h-3.5" />
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            {publicacoesFiltradas.length} {publicacoesFiltradas.length === 1 ? 'publicação' : 'publicações'}
-            {temFiltrosAtivos && ' (filtradas)'}
-          </span>
-
-          {publicacoesFiltradas.length > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 text-[11px] gap-1 text-slate-500 dark:text-slate-400"
-              onClick={selecionarTodos}
-            >
-              <ListChecks className="w-3 h-3" />
-              {selecionados.size === publicacoesFiltradas.length ? 'Desmarcar todos' : 'Selecionar todos'}
-            </Button>
-          )}
-        </div>
-
-        {carregando ? (
-          <div className="p-12 text-center">
-            <Loader2 className="w-8 h-8 animate-spin text-slate-400 mx-auto mb-4" />
-            <p className="text-sm text-slate-500 dark:text-slate-400">Carregando publicações...</p>
-          </div>
-        ) : publicacoesFiltradas.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-surface-2 flex items-center justify-center mx-auto mb-4">
-              <FileX className="w-8 h-8 text-slate-400" />
-            </div>
-            <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">Nenhuma publicação encontrada</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">
-              {publicacoes.length === 0
-                ? 'Não há publicações recebidas ainda. Configure as fontes de publicações.'
-                : 'Nenhuma publicação corresponde aos filtros selecionados.'}
-            </p>
-            <div className="flex items-center gap-2 justify-center">
-              {publicacoes.length === 0 ? (
-                <Link href="/dashboard/publicacoes/config">
-                  <Button size="sm" className="gap-2 bg-gradient-to-r from-[#34495e] to-[#46627f]">
-                    <Settings className="w-4 h-4" />
-                    Configurar Fontes
-                  </Button>
-                </Link>
-              ) : (
-                <Button variant="outline" size="sm" onClick={limparFiltros}>
-                  Limpar Filtros
-                </Button>
-              )}
-            </div>
-          </div>
-        ) : (
-          <>
-          {/* Mobile: Card list com expansão inline */}
-          <div className="md:hidden divide-y divide-slate-100 dark:divide-slate-700">
-            {publicacoesFiltradas.map((pub) => (
-              <div key={pub.id}>
-                <div
-                  onClick={() => toggleExpand(pub.id)}
-                  className={cn(
-                    'p-3.5 active:bg-slate-50 dark:active:bg-surface-2 transition-colors cursor-pointer',
-                    expandedId === pub.id && 'bg-blue-50/40 dark:bg-blue-950/20'
-                  )}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <ChevronRight className={cn(
-                        'w-3.5 h-3.5 text-slate-400 transition-transform duration-200',
-                        expandedId === pub.id && 'rotate-90'
-                      )} />
-                      {getStatusBadge(pub.status)}
-                      {pub.is_snippet && (
-                        <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
-                          Trecho
-                        </Badge>
-                      )}
-                      {(pub.comentarios_count ?? 0) > 0 && (
-                        <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 gap-0.5">
-                          <MessageSquare className="w-3 h-3" />
-                          {pub.comentarios_count}
-                        </Badge>
-                      )}
-                    </div>
-                    <span className="text-[11px] text-slate-400">
-                      {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                  <p className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{pub.tribunal}</p>
-                  {pub.vara && <p className="text-[11px] text-slate-500 dark:text-slate-400">{pub.vara}</p>}
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{getTipoLabel(pub.tipo_publicacao)}</span>
-                    {pub.numero_processo ? (
-                      <span className={cn(
-                        'text-[11px] truncate max-w-[180px] text-right',
-                        pub.processo_id ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400'
-                      )}>
-                        {pub.processo_id && (pub.processo_autor || pub.processo_reu)
-                          ? [pub.processo_autor, pub.processo_reu].filter(Boolean).join(' x ')
-                          : pub.numero_processo
-                        }
-                      </span>
-                    ) : (
-                      <span className="text-[11px] text-slate-400">Sem processo</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Expansão mobile - single column */}
-                {expandedId === pub.id && (
-                  <div className="border-l-[3px] border-[#1E3A8A] dark:border-blue-400/40 bg-blue-50/30 dark:bg-blue-950/20 px-3 pb-3">
-                    <div className="space-y-3">
-                      {/* Botões de ação mobile */}
-                      <div className="flex flex-wrap gap-1.5 pt-2">
-                        {(pub.status === 'processada' || pub.status === 'arquivada') && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1.5 border-amber-200 text-amber-600"
-                            onClick={(e) => voltarParaPendente(pub.id, e)}
-                          >
-                            <Undo2 className="w-3.5 h-3.5" />
-                            Pendente
-                          </Button>
-                        )}
-                        {pub.status !== 'processada' && pub.status !== 'arquivada' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1.5 border-emerald-200 text-emerald-600"
-                            onClick={(e) => marcarProcessada(pub.id, e)}
-                          >
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Tratada
-                          </Button>
-                        )}
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={(e) => abrirWizardTarefa(pub, e)}
-                        >
-                          <CheckSquare className="w-3.5 h-3.5" />
-                          Tarefa
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={(e) => abrirWizardEvento(pub, e)}
-                        >
-                          <Calendar className="w-3.5 h-3.5" />
-                          Evento
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs gap-1.5"
-                          onClick={(e) => abrirWizardAudiencia(pub, e)}
-                        >
-                          <Gavel className="w-3.5 h-3.5" />
-                          Audiência
-                        </Button>
-                        {pub.status !== 'arquivada' && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-7 text-xs gap-1.5 text-slate-400"
-                            onClick={(e) => arquivarPublicacao(pub.id, e)}
-                          >
-                            <Archive className="w-3.5 h-3.5" />
-                            Arquivar
-                          </Button>
-                        )}
-                      </div>
-
-                      {/* Componente expandido reutilizado via table wrapper trick */}
-                      <table className="w-full"><tbody>
-                        <PublicacaoExpandedRow
-                          publicacao={pub}
-                          isExpanded={true}
-                          escritorioId={escritorioAtivo || ''}
-                          onCriarTarefa={() => abrirWizardTarefa(pub)}
-                          onCriarEvento={() => abrirWizardEvento(pub)}
-                          onCriarAudiencia={() => abrirWizardAudiencia(pub)}
-                          onCriarProcesso={(cnj) => abrirWizardProcesso(cnj)}
-                          cachedData={expandedCacheRef.current.get(pub.id)}
-                          onDataLoaded={handleExpandedDataLoaded}
-                        />
-                      </tbody></table>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Desktop: Table */}
-          <div className="hidden md:block overflow-x-auto">
-            <table className="w-full table-fixed">
-              <thead className="bg-slate-50 dark:bg-surface-0 border-b border-slate-200 dark:border-slate-700">
-                <tr>
-                  <th className="w-[40px] p-3">
-                    <Checkbox
-                      checked={selecionados.size === publicacoesFiltradas.length && publicacoesFiltradas.length > 0}
-                      onCheckedChange={selecionarTodos}
-                    />
-                  </th>
-                  <th className="w-[200px] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Status</th>
-                  <th className="w-[90px] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">
-                    <TooltipProvider delayDuration={200}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-help border-b border-dashed border-slate-400">Data</span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Data de Disponibilização</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </th>
-                  <th className="w-[15%] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tribunal</th>
-                  <th className="w-[80px] text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Tipo</th>
-                  <th className="text-left text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Processo / Partes</th>
-                  <th className="w-[130px] text-right text-xs font-medium text-slate-600 dark:text-slate-400 p-3">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {publicacoesFiltradas.map((pub) => (
-                  <React.Fragment key={pub.id}>
-                    <tr
-                      className={cn(
-                        'hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors cursor-pointer group',
-                        selecionados.has(pub.id) && 'bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/30 dark:hover:bg-blue-950/40',
-                        expandedId === pub.id && 'bg-blue-50/40 dark:bg-blue-950/20 border-b-0'
-                      )}
-                      onClick={() => toggleExpand(pub.id)}
-                    >
-                      <td className="p-3" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selecionados.has(pub.id)}
-                          onCheckedChange={() => toggleSelecao(pub.id)}
-                        />
-                      </td>
-                      <td className="p-3">
-                        <div className="flex items-center gap-1.5 whitespace-nowrap">
-                          <ChevronRight className={cn(
-                            'w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0',
-                            expandedId === pub.id && 'rotate-90 text-[#1E3A8A]'
-                          )} />
-                          {getStatusBadge(pub.status)}
-                          {pub.agendamento_tipo && (
-                            <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700/50">
-                              {pub.agendamento_tipo === 'tarefa' && <CheckSquare className="w-3 h-3 mr-1" />}
-                              {pub.agendamento_tipo === 'compromisso' && <Calendar className="w-3 h-3 mr-1" />}
-                              {pub.agendamento_tipo === 'audiencia' && <Gavel className="w-3 h-3 mr-1" />}
-                              Agendado
-                            </Badge>
-                          )}
-                          {pub.is_snippet && (
-                            <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
-                              Trecho
-                            </Badge>
-                          )}
-                          {(pub.comentarios_count ?? 0) > 0 && (
-                            <Badge variant="outline" className="text-[10px] bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-600 gap-0.5">
-                              <MessageSquare className="w-3 h-3" />
-                              {pub.comentarios_count}
-                            </Badge>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-3">
-                        <span className="text-xs text-slate-600 dark:text-slate-400">
-                          {new Date(pub.data_publicacao + 'T00:00:00').toLocaleDateString('pt-BR')}
-                        </span>
-                      </td>
-                      <td className="p-3 truncate" title={pub.tribunal}>
-                        <div className="text-xs font-medium text-slate-700 dark:text-slate-300 truncate">{pub.tribunal}</div>
-                        {pub.vara && <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{pub.vara}</div>}
-                      </td>
-                      <td className="p-3 truncate">
-                        <span className="text-xs text-slate-700 dark:text-slate-300">{getTipoLabel(pub.tipo_publicacao)}</span>
-                      </td>
-                      <td className="p-3 overflow-hidden">
-                        {pub.numero_processo ? (
-                          pub.processo_id ? (
-                            <span
-                              className="flex flex-col cursor-pointer group/proc min-w-0"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                router.push(`/dashboard/processos/${pub.processo_id}`)
-                              }}
-                            >
-                              {(pub.processo_autor || pub.processo_reu) ? (
-                                <>
-                                  <span className="text-sm font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 truncate" title={[pub.processo_autor, pub.processo_reu].filter(Boolean).join(' x ')}>
-                                    {[pub.processo_autor, pub.processo_reu].filter(Boolean).join(' x ')}
-                                  </span>
-                                  <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 flex items-center gap-1">
-                                    {pub.numero_processo}
-                                    <ExternalLink className="w-2.5 h-2.5 opacity-60" />
-                                  </span>
-                                </>
-                              ) : (
-                                <span className="text-sm font-mono font-medium text-[#3B82F6] hover:text-[#2563EB] group-hover/proc:underline underline-offset-2 flex items-center gap-1.5">
-                                  {pub.numero_processo}
-                                  <ExternalLink className="w-3 h-3 opacity-60" />
-                                </span>
-                              )}
-                            </span>
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-mono text-slate-700 dark:text-slate-300">{pub.numero_processo}</span>
-                              <Badge variant="outline" className="text-[10px] bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-700/50">
-                                Sem pasta
-                              </Badge>
-                            </div>
-                          )
-                        ) : (
-                          <span className="text-sm text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="p-3">
-                        <TooltipProvider delayDuration={200}>
-                          <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                            {/* Botão Voltar Pendente - Só aparece se já foi tratada ou arquivada */}
-                            {(pub.status === 'processada' || pub.status === 'arquivada') && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-amber-50 text-amber-600 hover:text-amber-700"
-                                    onClick={(e) => voltarParaPendente(pub.id, e)}
-                                  >
-                                    <Undo2 className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Voltar para pendente</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-
-                            {/* Botão Check Verde - Marcar como Tratada */}
-                            {pub.status !== 'processada' && pub.status !== 'arquivada' && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-emerald-50 text-emerald-600 hover:text-emerald-700"
-                                    onClick={(e) => marcarProcessada(pub.id, e)}
-                                  >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Marcar como tratada</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-
-                            {/* Botão Calendário Azul - Dropdown para Agendamentos */}
-                            <DropdownMenu>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      className="h-8 w-8 p-0 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-                                    >
-                                      <CalendarPlus className="w-4 h-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Agendar</p>
-                                </TooltipContent>
-                              </Tooltip>
-                              <DropdownMenuContent align="end" className="w-44">
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer"
-                                  onClick={(e) => abrirWizardTarefa(pub, e as any)}
-                                >
-                                  <CheckSquare className="w-4 h-4" />
-                                  Criar Tarefa
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer"
-                                  onClick={(e) => abrirWizardEvento(pub, e as any)}
-                                >
-                                  <Calendar className="w-4 h-4" />
-                                  Criar Compromisso
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="gap-2 cursor-pointer"
-                                  onClick={(e) => abrirWizardAudiencia(pub, e as any)}
-                                >
-                                  <Gavel className="w-4 h-4" />
-                                  Criar Audiência
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            {/* Botão Criar Pasta - Só aparece se tem número mas não tem pasta */}
-                            {pub.numero_processo && !pub.processo_id && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
-                                    onClick={(e) => abrirWizardProcesso(pub.numero_processo!, e)}
-                                  >
-                                    <FolderPlus className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Criar pasta do processo</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-
-                            {/* Botão Arquivar - Não aparece se já está arquivada */}
-                            {pub.status !== 'arquivada' && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-8 w-8 p-0 hover:bg-slate-100 dark:hover:bg-surface-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-                                    onClick={(e) => arquivarPublicacao(pub.id, e)}
-                                  >
-                                    <Archive className="w-4 h-4" />
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>Arquivar</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </TooltipProvider>
-                      </td>
-                    </tr>
-
-                    {/* Row expandida com texto + painel IA */}
-                    <PublicacaoExpandedRow
-                      publicacao={pub}
-                      isExpanded={expandedId === pub.id}
-                      escritorioId={escritorioAtivo || ''}
-                      onCriarTarefa={() => abrirWizardTarefa(pub)}
-                      onCriarEvento={() => abrirWizardEvento(pub)}
-                      onCriarAudiencia={() => abrirWizardAudiencia(pub)}
-                      onCriarProcesso={(cnj) => abrirWizardProcesso(cnj)}
-                      cachedData={expandedCacheRef.current.get(pub.id)}
-                      onDataLoaded={handleExpandedDataLoaded}
-                    />
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          </>
-        )}
-      </div>
 
       {/* Wizard de Tarefa */}
       {wizardTarefa.open && wizardTarefa.pub && escritorioAtivo && (
@@ -1499,7 +553,7 @@ export default function PublicacoesPage() {
         />
       )}
 
-      {/* Modal de Busca por CNJ (Criar Pasta) */}
+      {/* Modal de Busca por CNJ (Vincular/Criar Pasta) */}
       <BuscaCNJModal
         open={buscaCNJModal.open}
         onClose={() => setBuscaCNJModal({ open: false, cnj: '' })}
@@ -1508,27 +562,23 @@ export default function PublicacoesPage() {
         initialCNJ={buscaCNJModal.cnj}
       />
 
-      {/* Wizard Automático (com dados do Escavador) */}
+      {/* Wizard Automático (Escavador) */}
       {wizardProcessoAuto.open && wizardProcessoAuto.dados && (
         <ProcessoWizardAutomatico
           open={wizardProcessoAuto.open}
           onClose={() => setWizardProcessoAuto({ open: false, dados: null })}
           dadosEscavador={wizardProcessoAuto.dados}
           onProcessoCriado={async (processoId: string) => {
-            // Vincular publicações ao processo criado (pelo número CNJ)
             const cnj = wizardProcessoAuto.dados?.numero_cnj
             if (cnj && processoId && escritorioAtivo) {
               try {
-                // Tentar vincular pelo número CNJ exato ou apenas dígitos
                 const cnjSomenteDigitos = cnj.replace(/\D/g, '')
-
                 const { data: updated, error } = await supabase
                   .from('publicacoes_publicacoes')
                   .update({ processo_id: processoId })
                   .eq('escritorio_id', escritorioAtivo)
                   .or(`numero_processo.eq.${cnj},numero_processo.eq.${cnjSomenteDigitos}`)
                   .select('id')
-
                 if (error) {
                   console.error('Erro ao vincular publicações:', error.message, error.details, error.hint)
                 } else if (updated && updated.length > 0) {
@@ -1552,19 +602,16 @@ export default function PublicacoesPage() {
           open={wizardProcessoManual.open}
           onClose={() => setWizardProcessoManual({ open: false, cnj: '' })}
           onSuccess={async (processoId) => {
-            // Vincular publicações ao processo criado (pelo número CNJ)
             const cnj = wizardProcessoManual.cnj
             if (cnj && processoId && escritorioAtivo) {
               try {
                 const cnjSomenteDigitos = cnj.replace(/\D/g, '')
-
                 const { data: updated, error } = await supabase
                   .from('publicacoes_publicacoes')
                   .update({ processo_id: processoId })
                   .eq('escritorio_id', escritorioAtivo)
                   .or(`numero_processo.eq.${cnj},numero_processo.eq.${cnjSomenteDigitos}`)
                   .select('id')
-
                 if (error) {
                   console.error('Erro ao vincular publicações:', error.message, error.details, error.hint)
                 } else if (updated && updated.length > 0) {

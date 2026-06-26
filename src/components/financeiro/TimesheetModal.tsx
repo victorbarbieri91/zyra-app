@@ -29,6 +29,8 @@ import { useTimesheetEntry } from '@/hooks/useTimesheetEntry'
 import { useQueryClient } from '@tanstack/react-query'
 import { AtoHoraProgress } from './AtoHoraProgress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import {
@@ -197,6 +199,7 @@ export default function TimesheetModal({
 
   // Form state
   const [dataTrabalho, setDataTrabalho] = useState(formatDateForInput())
+  const [dateOpen, setDateOpen] = useState(false)
   const [atividade, setAtividade] = useState('')
   const [faturavel, setFaturavel] = useState<boolean | null>(null) // null = usar padrão do contrato
   const [faturavelManual, setFaturavelManual] = useState(false) // Indica se usuário sobrescreveu
@@ -921,6 +924,7 @@ export default function TimesheetModal({
   const baseList = buscando ? itensBusca : itensRecentes
 
   const dataObj = parseInputDate(dataTrabalho)
+  const hojeObj = parseInputDate(formatDateForInput())
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -1130,18 +1134,29 @@ export default function TimesheetModal({
               <div className="flex-1 min-w-0 flex flex-col gap-3">
                 <div>
                   <div className={cn(LABEL, 'mb-2')}>Data</div>
-                  <div className={cn('relative flex items-center gap-2.5 h-11 px-3.5 rounded-[12px]', FIELD)}>
-                    <Calendar className="w-4 h-4 text-[#9aa1a8] dark:text-[#808fa1] flex-shrink-0" />
-                    <span className="text-[13.5px] font-semibold font-mono text-[#1a2330] dark:text-[#e8ecf2]">{format(dataObj, 'dd/MM/yyyy')}</span>
-                    <span className="text-[12.5px] text-[#9aa1a8] dark:text-[#808fa1] ml-auto capitalize">{format(dataObj, 'EEEE', { locale: ptBR })}</span>
-                    <input
-                      type="date"
-                      value={dataTrabalho}
-                      max={formatDateForInput()}
-                      onChange={(e) => e.target.value && setDataTrabalho(e.target.value)}
-                      className="absolute inset-0 opacity-0 cursor-pointer"
-                    />
-                  </div>
+                  {/* Calendário próprio do sistema (V4), mesmo do "reagendar" da Agenda.
+                      Mantém o visual do campo (ícone + data + dia) e abre o seletor temático. */}
+                  <Popover open={dateOpen} onOpenChange={setDateOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        className={cn('w-full flex items-center gap-2.5 h-11 px-3.5 rounded-[12px] transition-colors hover:border-[#89bcbe] dark:hover:border-[#89bcbe]', FIELD)}
+                      >
+                        <Calendar className="w-4 h-4 text-[#9aa1a8] dark:text-[#808fa1] flex-shrink-0" />
+                        <span className="text-[13.5px] font-semibold font-mono text-[#1a2330] dark:text-[#e8ecf2]">{format(dataObj, 'dd/MM/yyyy')}</span>
+                        <span className="text-[12.5px] text-[#9aa1a8] dark:text-[#808fa1] ml-auto capitalize">{format(dataObj, 'EEEE', { locale: ptBR })}</span>
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-[200]" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dataObj}
+                        defaultMonth={dataObj}
+                        onSelect={(d) => { if (d) { setDataTrabalho(format(d, 'yyyy-MM-dd')); setDateOpen(false) } }}
+                        disabled={(date) => date > hojeObj}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* CONTRATO VINCULADO */}

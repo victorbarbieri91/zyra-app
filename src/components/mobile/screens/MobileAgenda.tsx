@@ -347,8 +347,8 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
 
                 <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.25, color: done ? t.muted : t.primary, textDecoration: done ? 'line-through' : 'none' }}>{e.titulo}</div>
 
-                {e.consultivo_titulo && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 3, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.consultivo_titulo}</div>}
-                {!e.consultivo_titulo && e.local && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 3, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.local}</div>}
+                {/* Partes: processo → "Autor x Réu" (caso_titulo); consultivo → título; senão local */}
+                {(e.caso_titulo || e.consultivo_titulo || e.local) && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 3, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.caso_titulo || e.consultivo_titulo || e.local}</div>}
 
                 {(area || prazo) && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
@@ -392,7 +392,7 @@ function RescheduleSheet({ dark, item, onClose, onReagendar }: { dark: boolean; 
     { label: 'Em 2 dias', date: addDays(base, 2) },
     { label: 'Próxima semana', date: nextMonday(base) },
   ]
-  const subtitulo = item.consultivo_titulo || item.processo_numero || item.local || ''
+  const subtitulo = item.caso_titulo || item.consultivo_titulo || item.processo_numero || item.local || ''
   return (
     <MobileSheet dark={dark} onClose={onClose}>
       <div style={{ marginBottom: 16 }}>

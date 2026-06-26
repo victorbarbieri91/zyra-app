@@ -4,9 +4,10 @@
 // components/MobileHomeB2.jsx, ligado a dados reais (agenda do dia, horas,
 // ranking, últimas horas). Cores via mTokens; ícones via MobileIcon.
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { addDays, nextMonday } from 'date-fns'
 import { toast } from 'sonner'
+import { useTheme } from 'next-themes'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateTimeForDB, parseDBDate } from '@/lib/timezone'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,7 +15,7 @@ import { useDashboardAgenda, type AgendaItemDashboard } from '@/hooks/useDashboa
 import { useTimesheetRecentes, type TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
 import { useDashboardPerformance, type EquipeMember } from '@/hooks/useDashboardPerformance'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
-import { mTokens, agendaMeta, hsStatus } from '../tokens'
+import { mTokens, agendaMeta, hsStatus, prioMeta } from '../tokens'
 import MobileIcon from '../MobileIcon'
 import MobileSection from '../shell/MobileSection'
 import MobileSheet from '../shell/MobileSheet'
@@ -70,6 +71,21 @@ const TABELA: Record<string, { table: string; dateCol: string; doneStatus: strin
   audiencia: { table: 'agenda_audiencias', dateCol: 'data_hora', doneStatus: 'realizada' },
 }
 
+// prefill do "lançar horas" a partir do item da agenda
+function prefillFromItem(e: AgendaItemDashboard) {
+  return {
+    processoId: e.processo_id ?? null,
+    consultaId: e.consultivo_id ?? null,
+    tarefaId: e.tipo === 'tarefa' ? e.id : null,
+  }
+}
+
+// data dd/MM/aaaa a partir de string do banco (date ou timestamptz)
+function fmtDataBR(s?: string): string {
+  if (!s) return '—'
+  return new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit', year: 'numeric' }).format(parseDBDate(s))
+}
+
 export default function MobileHome({ dark }: { dark: boolean }) {
   const t = mTokens(dark)
   const nav = useMobileNav()
@@ -84,6 +100,11 @@ export default function MobileHome({ dark }: { dark: boolean }) {
   const [open, setOpen] = useState<{ agenda: boolean; ranking: boolean; horas: boolean }>({ agenda: true, ranking: false, horas: false })
   const toggle = (k: 'agenda' | 'ranking' | 'horas') => setOpen((s) => ({ ...s, [k]: !s[k] }))
   const [reschedItem, setReschedItem] = useState<AgendaItemDashboard | null>(null)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
+  const [detailItem, setDetailItem] = useState<AgendaItemDashboard | null>(null)
+  // numero_pasta + status do processo não estão na view da agenda — busca em lote
+  // pelos processo_id presentes (RLS isola por escritório).
+  const [pastaMap, setPastaMap] = useState<Record<string, { pasta?: string; status?: string }>>({})
 
   // nome do usuário (saudação + avatar)
   useEffect(() => {
@@ -97,6 +118,24 @@ export default function MobileHome({ dark }: { dark: boolean }) {
     })()
     return () => { cancel = true }
   }, [user])
+
+  // busca de pasta/status dos processos vinculados aos itens da agenda
+  useEffect(() => {
+    const ids = Array.from(new Set(agenda.map((a) => a.processo_id).filter(Boolean))) as string[]
+    if (ids.length === 0) { setPastaMap({}); return }
+    let cancel = false
+    const supabase = createClient()
+    void (async () => {
+      const { data } = await supabase.from('processos_processos').select('id, numero_pasta, status').in('id', ids)
+      if (cancel || !data) return
+      const map: Record<string, { pasta?: string; status?: string }> = {}
+      for (const row of data as { id: string; numero_pasta?: string | null; status?: string | null }[]) {
+        map[row.id] = { pasta: row.numero_pasta || undefined, status: row.status || undefined }
+      }
+      setPastaMap(map)
+    })()
+    return () => { cancel = true }
+  }, [agenda])
 
   const dt = useMemo(() => brParts(new Date()), [])
   const primeiroNome = (nome || user?.email?.split('@')[0] || '').split(/\s+/)[0]
@@ -137,12 +176,7 @@ export default function MobileHome({ dark }: { dark: boolean }) {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'relative' }}>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', fontWeight: 500 }}>{saudacao(dt.hour)}{primeiroNome ? `, ${primeiroNome}` : ''}</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <button type="button" style={{ position: 'relative', width: 38, height: 38, borderRadius: 12, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.16)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
-                <MobileIcon name="bell" size={17} />
-              </button>
-              <div style={{ width: 38, height: 38, borderRadius: 13, background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 600, fontSize: 12.5 }}>{iniciais(nome || primeiroNome || '—')}</div>
-            </div>
+            <button type="button" onClick={() => setUserMenuOpen(true)} aria-label="Menu do usuário" style={{ width: 40, height: 40, borderRadius: 13, background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 600, fontSize: 12.5, cursor: 'pointer', fontFamily: 'inherit' }}>{iniciais(nome || primeiroNome || '—')}</button>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14, marginTop: 20, position: 'relative' }}>
@@ -181,7 +215,7 @@ export default function MobileHome({ dark }: { dark: boolean }) {
         {/* ===== seções ===== */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '16px 20px 0' }}>
           <MobileSection title="Agenda de hoje" summary={`${agenda.length} ${agenda.length === 1 ? 'item' : 'itens'} hoje`} open={open.agenda} onToggle={() => toggle('agenda')} dark={dark}>
-            <AgendaTimeline dark={dark} items={agenda} onConcluir={concluir} onHoras={() => nav.openRegistrarHoras()} onResched={setReschedItem} onVerTudo={() => nav.navigate('/dashboard/agenda')} />
+            <AgendaTimeline dark={dark} items={agenda} pastaMap={pastaMap} onConcluir={concluir} onHoras={(e) => nav.openRegistrarHoras(prefillFromItem(e))} onResched={setReschedItem} onOpenDetail={setDetailItem} onVerTudo={() => nav.navigate('/dashboard/agenda')} />
           </MobileSection>
 
           <MobileSection title="Ranking da equipe" summary="Horas cobráveis · este mês" open={open.ranking} onToggle={() => toggle('ranking')} dark={dark}>
@@ -197,7 +231,193 @@ export default function MobileHome({ dark }: { dark: boolean }) {
       {reschedItem && (
         <RescheduleSheet dark={dark} item={reschedItem} onClose={() => setReschedItem(null)} onReagendar={(d) => reagendar(reschedItem, d)} />
       )}
+
+      {userMenuOpen && (
+        <UserMenuSheet dark={dark} nome={nome || primeiroNome} email={user?.email || ''} onClose={() => setUserMenuOpen(false)} />
+      )}
+
+      {detailItem && (
+        <TaskDetailSheet
+          dark={dark}
+          item={detailItem}
+          pasta={detailItem.processo_id ? pastaMap[detailItem.processo_id] : undefined}
+          onClose={() => setDetailItem(null)}
+          onConcluir={() => { void concluir(detailItem); setDetailItem(null) }}
+          onReagendar={() => { const it = detailItem; setDetailItem(null); setReschedItem(it) }}
+          onLancar={() => { const it = detailItem; setDetailItem(null); nav.openRegistrarHoras(prefillFromItem(it)) }}
+        />
+      )}
     </div>
+  )
+}
+
+// ---------- menu do usuário (nome, e-mail, tema, sair) ----------
+function UserMenuSheet({ dark, nome, email, onClose }: { dark: boolean; nome: string; email: string; onClose: () => void }) {
+  const t = mTokens(dark)
+  const { signOut } = useAuth()
+  const { resolvedTheme, setTheme } = useTheme()
+  const isDark = resolvedTheme === 'dark'
+  const item = {
+    width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit',
+    background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', textAlign: 'left',
+    fontSize: 14.5, fontWeight: 600, color: t.primary,
+  } as const
+  return (
+    <MobileSheet dark={dark} onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+        <div style={{ width: 46, height: 46, borderRadius: 14, background: 'linear-gradient(135deg,#34495e,#46627f)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 15 }}>{iniciais(nome || '—')}</div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 15.5, fontWeight: 600, color: t.primary, letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{nome || 'Usuário'}</div>
+          {email && <div style={{ fontSize: 12, color: t.muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>}
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+        <button type="button" onClick={() => setTheme(isDark ? 'light' : 'dark')} style={item}>
+          <span style={{ color: t.teal, display: 'flex' }}><MobileIcon name={isDark ? 'sun' : 'moon'} size={17} /></span>
+          <span style={{ flex: 1 }}>{isDark ? 'Tema claro' : 'Tema escuro'}</span>
+        </button>
+        <button type="button" onClick={() => { onClose(); void signOut() }} style={{ ...item, color: dark ? '#c98080' : '#9e4848' }}>
+          <span style={{ display: 'flex' }}><MobileIcon name="logout" size={17} /></span>
+          <span style={{ flex: 1 }}>Sair</span>
+        </button>
+      </div>
+    </MobileSheet>
+  )
+}
+
+// ---------- folha de DETALHE da tarefa (quase tela cheia) ----------
+function TaskDetailSheet({ dark, item, pasta, onClose, onConcluir, onReagendar, onLancar }: {
+  dark: boolean
+  item: AgendaItemDashboard
+  pasta?: { pasta?: string; status?: string }
+  onClose: () => void
+  onConcluir: () => void
+  onReagendar: () => void
+  onLancar: () => void
+}) {
+  const t = mTokens(dark)
+  const kind = item.tipo === 'audiencia' ? 'audiencia' : item.tipo === 'evento' ? 'compromisso' : 'tarefa'
+  const m = agendaMeta(kind, dark)
+  const done = ['concluida', 'realizado', 'realizada'].includes(item.status || '')
+  const pm = prioMeta(item.prioridade || 'baixa', dark)
+  const isProcesso = !!item.processo_id
+  const isConsultivo = !!item.consultivo_id
+  const resps = (item.todos_responsaveis || item.responsavel_nome || '').split(',').map((s) => s.trim()).filter(Boolean)
+  const descricao = item.descricao || item.title
+
+  return (
+    <div onClick={onClose} style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(20,26,34,0.45)', animation: 'dcScrimIn .2s ease', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
+      <div onClick={(ev) => ev.stopPropagation()} style={{ background: t.page, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', display: 'flex', flexDirection: 'column', animation: 'dcSheetUp .28s cubic-bezier(.32,.72,0,1)', boxShadow: '0 -10px 40px -12px rgba(0,0,0,0.3)' }}>
+        <div style={{ flexShrink: 0, paddingTop: 10, position: 'relative' }}>
+          <div style={{ width: 38, height: 4, borderRadius: 2, background: t.border, margin: '0 auto' }} />
+          <button type="button" onClick={onClose} aria-label="Fechar" style={{ position: 'absolute', right: 14, top: 8, width: 32, height: 32, borderRadius: 16, border: 'none', cursor: 'pointer', background: t.card, color: t.secondary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MobileIcon name="close" size={16} /></button>
+        </div>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: dark ? 'rgba(139,161,192,0.16)' : '#eef1f5', color: m.c }}>
+              <span style={{ width: 6, height: 6, borderRadius: 3, background: m.c }} />{m.label}
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: pm.bg, color: pm.fg }}>
+              <span style={{ width: 6, height: 6, borderRadius: 3, background: pm.dot }} />Prioridade {pm.label}
+            </span>
+          </div>
+
+          <div style={{ fontSize: 21, fontWeight: 600, color: t.primary, letterSpacing: '-0.015em', lineHeight: 1.22, fontFamily: 'var(--font-fraunces), Georgia, serif' }}>{item.title}</div>
+
+          <div style={{ marginTop: 18 }}>
+            <SheetLabel dark={dark} icon="fileText">Descrição</SheetLabel>
+            <div style={{ fontSize: 14, color: item.descricao ? t.primary : t.muted, lineHeight: 1.45, fontStyle: item.descricao ? 'normal' : 'italic' }}>{descricao}</div>
+          </div>
+
+          {(isProcesso || isConsultivo) && (
+            <div style={{ marginTop: 18 }}>
+              <SheetLabel dark={dark} icon={isProcesso ? 'scale' : 'consultivo'}>{isProcesso ? 'Processo vinculado' : 'Consulta vinculada'}</SheetLabel>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '13px 14px' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {isProcesso ? (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        {pasta?.pasta && <span style={{ fontSize: 13, fontWeight: 600, color: t.primary, letterSpacing: '-0.01em' }}>{pasta.pasta}</span>}
+                        {pasta?.status && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, color: dark ? '#8db8a0' : '#3f6a54' }}><span style={{ width: 5, height: 5, borderRadius: 3, background: dark ? '#8db8a0' : '#6b9e84' }} />{pasta.status}</span>}
+                      </div>
+                      {item.processo_numero && <div style={{ fontSize: 11, color: t.muted, fontFamily: 'var(--font-mono)', marginTop: 3 }}>{item.processo_numero}</div>}
+                      {item.caso_titulo && <div style={{ fontSize: 12, color: t.secondary, marginTop: 2 }}>{item.caso_titulo}</div>}
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 13, fontWeight: 600, color: t.primary }}>{item.consultivo_titulo || 'Consulta'}</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {resps.length > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <SheetLabel dark={dark} icon="user" noMargin>Responsáveis</SheetLabel>
+                {item.created_at && <span style={{ fontSize: 10.5, color: t.muted }}>criada {fmtDataBR(item.created_at)}</span>}
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {resps.map((r, k) => (
+                  <div key={k} style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: t.card, border: `1px solid ${t.border}`, borderRadius: 20, padding: '5px 12px 5px 5px' }}>
+                    <span style={{ width: 24, height: 24, borderRadius: 12, background: 'linear-gradient(135deg,#34495e,#46627f)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9.5, fontWeight: 700 }}>{iniciais(r)}</span>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: t.primary }}>{r}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 18, display: 'flex', gap: 14, background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 15px' }}>
+            <DetailField dark={dark} icon="calendar" label="Execução"><span style={{ fontSize: 13, fontWeight: 700, color: t.primary, fontFamily: 'var(--font-mono)' }}>{fmtDataBR(item.data_inicio)}</span></DetailField>
+            <div style={{ width: 1, background: t.borderSubtle }} />
+            <DetailField dark={dark} icon="alert" label="Prazo fatal"><span style={{ fontSize: 13, fontWeight: 700, color: item.prazo_data_limite ? (dark ? '#d6a87a' : '#8a6438') : t.muted, fontFamily: 'var(--font-mono)' }}>{item.prazo_data_limite ? fmtDataBR(item.prazo_data_limite) : '—'}</span></DetailField>
+            <div style={{ width: 1, background: t.borderSubtle }} />
+            <DetailField dark={dark} icon="clock" label="Status"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: done ? (dark ? '#8db8a0' : '#3f6a54') : (dark ? '#d6a87a' : '#8a6438') }}><span style={{ width: 6, height: 6, borderRadius: 3, background: done ? (dark ? '#8db8a0' : '#6b9e84') : '#c2956b' }} />{done ? 'Concluída' : 'Pendente'}</span></DetailField>
+          </div>
+        </div>
+
+        <div style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)', background: t.card, borderTop: `1px solid ${t.border}` }}>
+          <SheetAction icon={done ? 'clock' : 'check'} label={done ? 'Reabrir' : 'Concluir'} primary={!done} dark={dark} onClick={onConcluir} />
+          <SheetAction icon="calendar" label="Reagendar" dark={dark} onClick={onReagendar} />
+          <SheetAction icon="clock" label="Lançar" dark={dark} onClick={onLancar} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SheetLabel({ dark, icon, children, noMargin }: { dark: boolean; icon: string; children: ReactNode; noMargin?: boolean }) {
+  const t = mTokens(dark)
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: noMargin ? 0 : 8 }}>
+      <span style={{ color: t.muted, display: 'flex' }}><MobileIcon name={icon} size={13} /></span>
+      <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.muted }}>{children}</span>
+    </div>
+  )
+}
+
+function DetailField({ dark, icon, label, children }: { dark: boolean; icon: string; label: string; children: ReactNode }) {
+  const t = mTokens(dark)
+  return (
+    <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
+        <span style={{ color: t.muted, display: 'flex' }}><MobileIcon name={icon} size={12} /></span>
+        <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.muted }}>{label}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function SheetAction({ icon, label, primary, dark, onClick }: { icon: string; label: string; primary?: boolean; dark: boolean; onClick?: () => void }) {
+  const t = mTokens(dark)
+  return (
+    <button type="button" onClick={onClick} style={{ height: 60, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 5, border: primary ? 'none' : `1px solid ${t.border}`, background: primary ? 'linear-gradient(135deg,#4f7d63,#5f9075)' : t.page, color: primary ? '#fff' : t.primary, boxShadow: primary ? '0 8px 18px -10px rgba(79,125,99,0.8)' : 'none' }}>
+      <MobileIcon name={icon} size={17} />
+      <span style={{ fontSize: 11, fontWeight: 600 }}>{label}</span>
+    </button>
   )
 }
 
@@ -217,7 +437,7 @@ function ActBtn({ icon, label, onClick, variant, dark }: { icon: string; label: 
 }
 
 // ---------- agenda em linha do tempo ----------
-function AgendaTimeline({ dark, items, onConcluir, onHoras, onResched, onVerTudo }: { dark: boolean; items: AgendaItemDashboard[]; onConcluir: (i: AgendaItemDashboard) => void; onHoras: (i: AgendaItemDashboard) => void; onResched: (i: AgendaItemDashboard) => void; onVerTudo: () => void }) {
+function AgendaTimeline({ dark, items, pastaMap, onConcluir, onHoras, onResched, onOpenDetail, onVerTudo }: { dark: boolean; items: AgendaItemDashboard[]; pastaMap: Record<string, { pasta?: string; status?: string }>; onConcluir: (i: AgendaItemDashboard) => void; onHoras: (i: AgendaItemDashboard) => void; onResched: (i: AgendaItemDashboard) => void; onOpenDetail: (i: AgendaItemDashboard) => void; onVerTudo: () => void }) {
   const t = mTokens(dark)
   if (items.length === 0) {
     return <div style={{ fontSize: 13, color: t.muted, padding: '8px 2px 4px' }}>Nada para hoje. Bom dia livre. ✨</div>
@@ -233,6 +453,10 @@ function AgendaTimeline({ dark, items, onConcluir, onHoras, onResched, onVerTudo
         // Só audiência e compromisso têm horário; tarefa não mostra hora
         // (data_inicio à meia-noite viraria "00:00").
         const mostraHorario = (kind === 'audiencia' || kind === 'compromisso') && !!e.time && e.time !== 'Dia todo'
+        // Partes: no processo é o "Autor x Réu" (caso_titulo); no consultivo, o
+        // título da consulta; senão, local/descrição.
+        const partes = e.caso_titulo || e.consultivo_titulo || e.local || e.descricao || null
+        const pasta = e.processo_id ? pastaMap[e.processo_id]?.pasta : undefined
         return (
           <div key={e.id} style={{ display: 'flex', gap: 10 }}>
             <div style={{ width: 12, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 16 }}>
@@ -241,7 +465,7 @@ function AgendaTimeline({ dark, items, onConcluir, onHoras, onResched, onVerTudo
             </div>
 
             <div style={{ flex: 1, minWidth: 0, marginBottom: 12, background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, boxShadow: t.shadow, overflow: 'hidden', opacity: done ? 0.72 : 1 }}>
-              <div style={{ padding: '12px 14px 12px' }}>
+              <div onClick={() => onOpenDetail(e)} style={{ padding: '12px 14px 12px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                   <span style={{ width: 6, height: 6, borderRadius: 3, background: m.c, flexShrink: 0 }} />
                   <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: m.c }}>{m.label}</span>
@@ -254,13 +478,16 @@ function AgendaTimeline({ dark, items, onConcluir, onHoras, onResched, onVerTudo
                   ) : null}
                 </div>
 
-                <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.25, color: done ? t.muted : t.primary, textDecoration: done ? 'line-through' : 'none' }}>{e.title}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.25, color: done ? t.muted : t.primary, textDecoration: done ? 'line-through' : 'none' }}>{e.title}</div>
+                  <span style={{ color: t.muted, flexShrink: 0, display: 'flex', marginTop: 2 }}><MobileIcon name="chevronRight" size={15} /></span>
+                </div>
 
-                {e.subtitle && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 3, lineHeight: 1.35 }}>{e.subtitle}</div>}
+                {partes && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 3, lineHeight: 1.35 }}>{partes}</div>}
 
                 {e.processo_numero && (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, color: t.secondary, letterSpacing: '0.03em', background: dark ? '#161c26' : '#f3f1ea', padding: '2px 6px', borderRadius: 5, flexShrink: 0 }}>Contencioso</span>
+                    {pasta && <span style={{ fontSize: 9, fontWeight: 700, color: t.secondary, letterSpacing: '0.03em', background: dark ? '#161c26' : '#f3f1ea', padding: '2px 6px', borderRadius: 5, flexShrink: 0 }}>{pasta}</span>}
                     <span style={{ fontSize: 10.5, color: t.muted, fontFamily: 'var(--font-mono)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.processo_numero}</span>
                   </div>
                 )}

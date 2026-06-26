@@ -14,13 +14,21 @@ export interface AgendaItemDashboard {
   subtitle: string
   color: string
   urgente?: boolean
+  processo_id?: string
   processo_numero?: string
+  consultivo_id?: string
+  caso_titulo?: string
+  consultivo_titulo?: string
   descricao?: string
   local?: string
   prioridade?: string
   status?: string
   data_inicio?: string
   dia_inteiro?: boolean
+  prazo_data_limite?: string
+  responsavel_nome?: string
+  todos_responsaveis?: string
+  created_at?: string
 }
 
 // Mapeamento de cores por tipo
@@ -114,13 +122,21 @@ async function fetchDashboardAgenda(
       subtitle: subtitle || tipo.charAt(0).toUpperCase() + tipo.slice(1),
       color,
       urgente,
+      processo_id: item.processo_id || undefined,
       processo_numero: item.processo_numero,
+      consultivo_id: item.consultivo_id || undefined,
+      caso_titulo: item.caso_titulo || undefined,
+      consultivo_titulo: item.consultivo_titulo || undefined,
       descricao: item.descricao || undefined,
       local: item.local || undefined,
       prioridade: item.prioridade || undefined,
       status: item.status || undefined,
       data_inicio: item.data_inicio || undefined,
       dia_inteiro: item.dia_inteiro || false,
+      prazo_data_limite: item.prazo_data_limite || undefined,
+      responsavel_nome: item.responsavel_nome || undefined,
+      todos_responsaveis: item.todos_responsaveis || undefined,
+      created_at: item.created_at || undefined,
     }
   })
 

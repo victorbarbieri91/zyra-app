@@ -5,7 +5,7 @@
 // para a linguagem visual mobile (mTokens, MobileIcon, MobileScreenHeader).
 // Recorrência fica fora do escopo desta tela: toda tarefa criada aqui é única.
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -21,6 +21,7 @@ import {
 import { mTokens } from '../tokens'
 import MobileIcon from '../MobileIcon'
 import MobileScreenHeader from '../shell/MobileScreenHeader'
+import MobileFullScreen from '../shell/MobileFullScreen'
 
 // ============================================================
 // Tipos locais
@@ -82,6 +83,9 @@ export default function MobileNovaTarefa({ dark, prefill, onClose, onSuccess }: 
   const [responsaveisIds, setResponsaveisIds] = useState<string[]>(user?.id ? [user.id] : [])
   const [adicionando, setAdicionando] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  // dirty = começou a preencher → confirma descarte ao fechar
+  const dirty = titulo.trim().length > 0 || descricao.trim().length > 0
+  const closeApiRef = useRef<{ close: () => void; forceClose: () => void } | null>(null)
 
   // Vínculo (read-only quando vem por prefill; sem prefill, criação fica sem vínculo).
   const processoId = prefill?.processoId || null
@@ -152,7 +156,7 @@ export default function MobileNovaTarefa({ dark, prefill, onClose, onSuccess }: 
       await createTarefa(formData)
       toast.success('Tarefa criada com sucesso!')
       onSuccess?.()
-      onClose()
+      ;(closeApiRef.current?.forceClose ?? onClose)()
     } catch (error) {
       const msg =
         error instanceof Error
@@ -170,10 +174,21 @@ export default function MobileNovaTarefa({ dark, prefill, onClose, onSuccess }: 
   // ============================================================
 
   return (
+    <MobileFullScreen
+      dark={dark}
+      isDirty={dirty}
+      confirmTitle="Descartar tarefa?"
+      confirmMessage="O que você preencheu será perdido."
+      onClose={onClose}
+    >
+      {({ close, forceClose }) => {
+        closeApiRef.current = { close, forceClose }
+        return (
     <div
       style={{
         position: 'relative',
-        height: '100%',
+        flex: 1,
+        minHeight: 0,
         width: '100%',
         display: 'flex',
         flexDirection: 'column',
@@ -182,7 +197,7 @@ export default function MobileNovaTarefa({ dark, prefill, onClose, onSuccess }: 
         fontFamily: 'var(--font-sans)',
       }}
     >
-      <MobileScreenHeader title="Nova tarefa" onBack={onClose} dark={dark} />
+      <MobileScreenHeader title="Nova tarefa" onBack={close} dark={dark} />
 
       {/* ===== corpo rolável (formulário vertical) ===== */}
       <div style={{ flex: 1, overflow: 'auto', padding: '18px 20px calc(env(safe-area-inset-bottom, 0px) + 110px)' }}>
@@ -442,7 +457,7 @@ export default function MobileNovaTarefa({ dark, prefill, onClose, onSuccess }: 
       >
         <button
           type="button"
-          onClick={onClose}
+          onClick={close}
           disabled={isSubmitting}
           style={{
             flex: 1,
@@ -492,6 +507,9 @@ export default function MobileNovaTarefa({ dark, prefill, onClose, onSuccess }: 
         </button>
       </div>
     </div>
+        )
+      }}
+    </MobileFullScreen>
   )
 }
 

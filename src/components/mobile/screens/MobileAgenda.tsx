@@ -175,10 +175,10 @@ export default function MobileAgenda({ dark }: { dark: boolean }) {
   }
 
   async function reagendar(item: AgendaItem, novaData: Date) {
+    // fechamento (animado) é disparado pelo próprio sheet (close())
     const cfg = TABELA[item.tipo_entidade] || TABELA.tarefa
     const supabase = createClient()
     const { error } = await supabase.from(cfg.table).update({ [cfg.dateCol]: formatDateTimeForDB(novaData) }).eq('id', item.id)
-    setReschedItem(null)
     if (error) { toast.error('Não foi possível reagendar'); return }
     toast.success('Reagendado')
     refreshItems()
@@ -395,21 +395,25 @@ function RescheduleSheet({ dark, item, onClose, onReagendar }: { dark: boolean; 
   const subtitulo = item.caso_titulo || item.consultivo_titulo || item.processo_numero || item.local || ''
   return (
     <MobileSheet dark={dark} onClose={onClose}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Reagendar</div>
-        <div style={{ fontSize: 17, fontWeight: 600, color: t.primary, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{item.titulo}</div>
-        {subtitulo && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitulo}</div>}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {opts.map((o) => (
-          <button key={o.label} type="button" onClick={() => onReagendar(o.date)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}>
-            <span style={{ color: t.teal }}><MobileIcon name="calendar" size={17} /></span>
-            <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: t.primary }}>{o.label}</span>
-            <MobileIcon name="chevronRight" size={15} style={{ color: t.muted }} />
-          </button>
-        ))}
-      </div>
-      <button type="button" onClick={onClose} style={{ width: '100%', marginTop: 14, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, color: t.primary, fontSize: 14.5, fontWeight: 600 }}>Cancelar</button>
+      {(close) => (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Reagendar</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: t.primary, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{item.titulo}</div>
+            {subtitulo && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitulo}</div>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {opts.map((o) => (
+              <button key={o.label} type="button" onClick={() => { onReagendar(o.date); close() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}>
+                <span style={{ color: t.teal }}><MobileIcon name="calendar" size={17} /></span>
+                <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: t.primary }}>{o.label}</span>
+                <MobileIcon name="chevronRight" size={15} style={{ color: t.muted }} />
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={close} style={{ width: '100%', marginTop: 14, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, color: t.primary, fontSize: 14.5, fontWeight: 600 }}>Cancelar</button>
+        </>
+      )}
     </MobileSheet>
   )
 }

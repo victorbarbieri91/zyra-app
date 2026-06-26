@@ -20,6 +20,8 @@ import MobileConsultivo from './screens/MobileConsultivo'
 import MobileConsultaDetalhe from './screens/MobileConsultaDetalhe'
 import MobileNovaTarefa from './screens/MobileNovaTarefa'
 import MobileRegistrarHoras from './screens/MobileRegistrarHoras'
+import MobilePublicacoes from './screens/MobilePublicacoes'
+import MobileSheet from './shell/MobileSheet'
 
 // ---------- prefills dos overlays ----------
 export interface RegistrarHorasPrefill {
@@ -63,6 +65,7 @@ function tabFromPath(pathname: string): MobileTab | undefined {
   if (pathname.startsWith('/dashboard/agenda')) return 'agenda'
   if (pathname.startsWith('/dashboard/processos')) return 'processos'
   if (pathname.startsWith('/dashboard/consultivo')) return 'mais'
+  if (pathname.startsWith('/dashboard/publicacoes')) return 'mais'
   return undefined
 }
 
@@ -111,6 +114,7 @@ export default function MobileApp({ children }: { children: ReactNode }) {
     if (modulo === 'agenda') return <MobileAgenda dark={dark} />
     if (modulo === 'processos') return id ? <MobileProcessoDetalhe dark={dark} id={id} /> : <MobileProcessos dark={dark} />
     if (modulo === 'consultivo') return id ? <MobileConsultaDetalhe dark={dark} id={id} /> : <MobileConsultivo dark={dark} />
+    if (modulo === 'publicacoes') return <MobilePublicacoes dark={dark} />
     return <MobileEmBreve dark={dark} titulo="Em breve" descricao="Esta área ainda não tem versão de celular no app." onBack={() => router.push('/dashboard')} />
   }
 
@@ -129,55 +133,33 @@ export default function MobileApp({ children }: { children: ReactNode }) {
         {/* menu "Mais" */}
         {maisOpen && <MaisMenu dark={dark} onClose={() => setMaisOpen(false)} onOpen={(route) => { setMaisOpen(false); router.push(route) }} />}
 
-        {/* overlays full-screen de ação */}
+        {/* telas full-screen de ação (cada uma já se envolve em MobileFullScreen) */}
         {registrarHoras && (
-          <OverlayFull dark={dark}>
-            <MobileRegistrarHoras dark={dark} prefill={registrarHoras} onClose={() => setRegistrarHoras(null)} onSuccess={() => setRegistrarHoras(null)} />
-          </OverlayFull>
+          <MobileRegistrarHoras dark={dark} prefill={registrarHoras} onClose={() => setRegistrarHoras(null)} />
         )}
         {novaTarefa && (
-          <OverlayFull dark={dark}>
-            <MobileNovaTarefa dark={dark} prefill={novaTarefa} onClose={() => setNovaTarefa(null)} onSuccess={() => setNovaTarefa(null)} />
-          </OverlayFull>
+          <MobileNovaTarefa dark={dark} prefill={novaTarefa} onClose={() => setNovaTarefa(null)} />
         )}
       </div>
     </MobileNavContext.Provider>
   )
 }
 
-// ---------- container de overlay full-screen ----------
-function OverlayFull({ dark, children }: { dark: boolean; children: ReactNode }) {
-  const t = mTokens(dark)
-  return (
-    <div style={{ position: 'absolute', inset: 0, zIndex: 50, background: t.page, display: 'flex', flexDirection: 'column' }}>
-      {children}
-    </div>
-  )
-}
-
-// ---------- menu "Mais" (portado de Novo Dashboard Mobile.html · MaisMenu) ----------
+// ---------- menu "Mais" (bottom sheet) ----------
 function MaisMenu({ dark, onClose, onOpen }: { dark: boolean; onClose: () => void; onOpen: (route: string) => void }) {
   const t = mTokens(dark)
   const items = [
     { id: 'consultivo', route: '/dashboard/consultivo', icon: 'consultivo', label: 'Consultivo', sub: 'Consultas e pareceres', on: true },
     { id: 'financeiro', route: '/dashboard/financeiro', icon: 'dollar', label: 'Financeiro', sub: 'Honorários, contratos', on: false },
-    { id: 'publicacoes', route: '/dashboard/publicacoes', icon: 'publicacoes', label: 'Publicações', sub: 'Intimações e prazos', on: false },
+    { id: 'publicacoes', route: '/dashboard/publicacoes', icon: 'publicacoes', label: 'Publicações', sub: 'Intimações e prazos', on: true },
     { id: 'crm', route: '/dashboard/crm/pessoas', icon: 'crm', label: 'CRM / Clientes', sub: 'Contatos e leads', on: false },
     { id: 'relatorios', route: '/dashboard/relatorios', icon: 'report', label: 'Relatórios', sub: 'Indicadores do escritório', on: false },
   ]
   return (
-    <div
-      onClick={onClose}
-      style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(20,26,34,0.45)', animation: 'dcScrimIn .2s ease', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
-    >
-      <div
-        onClick={(ev) => ev.stopPropagation()}
-        style={{ background: t.page, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: '10px 18px calc(env(safe-area-inset-bottom, 0px) + 24px)', animation: 'dcSheetUp .28s cubic-bezier(.32,.72,0,1)', boxShadow: '0 -10px 40px -12px rgba(0,0,0,0.3)' }}
-      >
-        <div style={{ width: 38, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 14px' }} />
-        <div style={{ fontSize: 19, fontWeight: 600, color: t.primary, letterSpacing: '-0.02em', fontFamily: 'var(--font-fraunces), Georgia, serif', marginBottom: 2 }}>Mais</div>
-        <div style={{ fontSize: 11.5, color: t.secondary, marginBottom: 14 }}>Outros módulos do escritório</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <MobileSheet dark={dark} onClose={onClose}>
+      <div style={{ fontSize: 19, fontWeight: 600, color: t.primary, letterSpacing: '-0.02em', fontFamily: 'var(--font-fraunces), Georgia, serif', marginBottom: 2 }}>Mais</div>
+      <div style={{ fontSize: 11.5, color: t.secondary, marginBottom: 14 }}>Outros módulos do escritório</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {items.map((it) => (
             <button
               key={it.id}
@@ -199,8 +181,7 @@ function MaisMenu({ dark, onClose, onOpen }: { dark: boolean; onClose: () => voi
               {it.on && <MobileIcon name="chevronRight" size={16} style={{ color: t.muted, flexShrink: 0 }} />}
             </button>
           ))}
-        </div>
       </div>
-    </div>
+    </MobileSheet>
   )
 }

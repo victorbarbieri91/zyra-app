@@ -9,7 +9,7 @@ import {
   BarChart3, MoreHorizontal, Clock, Bell, Plus, Check, AlertTriangle,
   ChevronDown, ChevronRight, ChevronLeft, ArrowUp, ArrowDown, Search, Filter,
   FileText, LogOut, User, Target, Trophy, Play, Pause, Sun, Moon, Eye,
-  Sparkles, TrendingUp, X, type LucideIcon,
+  Sparkles, TrendingUp, X, MessageSquare, Archive, Send, type LucideIcon,
 } from 'lucide-react'
 import type { CSSProperties } from 'react'
 
@@ -50,6 +50,9 @@ const MAP: Record<string, LucideIcon> = {
   sparkle: Sparkles,
   trending: TrendingUp,
   close: X,
+  comment: MessageSquare,
+  archive: Archive,
+  send: Send,
 }
 
 interface MobileIconProps {

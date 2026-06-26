@@ -4,7 +4,7 @@
 // components/MobileHomeB2.jsx, ligado a dados reais (agenda do dia, horas,
 // ranking, últimas horas). Cores via mTokens; ícones via MobileIcon.
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { addDays, nextMonday } from 'date-fns'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
@@ -102,6 +102,8 @@ export default function MobileHome({ dark }: { dark: boolean }) {
   const [reschedItem, setReschedItem] = useState<AgendaItemDashboard | null>(null)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
   const [detailItem, setDetailItem] = useState<AgendaItemDashboard | null>(null)
+  // ação pendente após o detalhe FECHAR (anima) — evita empilhar 2 camadas no histórico
+  const pendingRef = useRef<{ type: 'resched' | 'horas'; item: AgendaItemDashboard } | null>(null)
   // numero_pasta + status do processo não estão na view da agenda — busca em lote
   // pelos processo_id presentes (RLS isola por escritório).
   const [pastaMap, setPastaMap] = useState<Record<string, { pasta?: string; status?: string }>>({})
@@ -158,10 +160,10 @@ export default function MobileHome({ dark }: { dark: boolean }) {
   }
 
   async function reagendar(item: AgendaItemDashboard, novaData: Date) {
+    // o fechamento (animado) é disparado pelo próprio sheet (close()); aqui só grava
     const cfg = TABELA[item.tipo] || TABELA.tarefa
     const supabase = createClient()
     const { error } = await supabase.from(cfg.table).update({ [cfg.dateCol]: formatDateTimeForDB(novaData) }).eq('id', item.id)
-    setReschedItem(null)
     if (error) { toast.error('Não foi possível reagendar'); return }
     toast.success('Reagendado')
     refreshAgenda()
@@ -241,10 +243,16 @@ export default function MobileHome({ dark }: { dark: boolean }) {
           dark={dark}
           item={detailItem}
           pasta={detailItem.processo_id ? pastaMap[detailItem.processo_id] : undefined}
-          onClose={() => setDetailItem(null)}
-          onConcluir={() => { void concluir(detailItem); setDetailItem(null) }}
-          onReagendar={() => { const it = detailItem; setDetailItem(null); setReschedItem(it) }}
-          onLancar={() => { const it = detailItem; setDetailItem(null); nav.openRegistrarHoras(prefillFromItem(it)) }}
+          onClose={() => {
+            setDetailItem(null)
+            const p = pendingRef.current
+            pendingRef.current = null
+            if (p?.type === 'resched') setReschedItem(p.item)
+            else if (p?.type === 'horas') nav.openRegistrarHoras(prefillFromItem(p.item))
+          }}
+          onConcluir={() => { void concluir(detailItem) }}
+          onReagendar={() => { pendingRef.current = { type: 'resched', item: detailItem } }}
+          onLancar={() => { pendingRef.current = { type: 'horas', item: detailItem } }}
         />
       )}
     </div>
@@ -276,7 +284,7 @@ function UserMenuSheet({ dark, nome, email, onClose }: { dark: boolean; nome: st
           <span style={{ color: t.teal, display: 'flex' }}><MobileIcon name={isDark ? 'sun' : 'moon'} size={17} /></span>
           <span style={{ flex: 1 }}>{isDark ? 'Tema claro' : 'Tema escuro'}</span>
         </button>
-        <button type="button" onClick={() => { onClose(); void signOut() }} style={{ ...item, color: dark ? '#c98080' : '#9e4848' }}>
+        <button type="button" onClick={() => { void signOut() }} style={{ ...item, color: dark ? '#c98080' : '#9e4848' }}>
           <span style={{ display: 'flex' }}><MobileIcon name="logout" size={17} /></span>
           <span style={{ flex: 1 }}>Sair</span>
         </button>
@@ -306,14 +314,19 @@ function TaskDetailSheet({ dark, item, pasta, onClose, onConcluir, onReagendar, 
   const descricao = item.descricao || item.title
 
   return (
-    <div onClick={onClose} style={{ position: 'absolute', inset: 0, zIndex: 45, background: 'rgba(20,26,34,0.45)', animation: 'dcScrimIn .2s ease', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-      <div onClick={(ev) => ev.stopPropagation()} style={{ background: t.page, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '92%', display: 'flex', flexDirection: 'column', animation: 'dcSheetUp .28s cubic-bezier(.32,.72,0,1)', boxShadow: '0 -10px 40px -12px rgba(0,0,0,0.3)' }}>
-        <div style={{ flexShrink: 0, paddingTop: 10, position: 'relative' }}>
-          <div style={{ width: 38, height: 4, borderRadius: 2, background: t.border, margin: '0 auto' }} />
-          <button type="button" onClick={onClose} aria-label="Fechar" style={{ position: 'absolute', right: 14, top: 8, width: 32, height: 32, borderRadius: 16, border: 'none', cursor: 'pointer', background: t.card, color: t.secondary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MobileIcon name="close" size={16} /></button>
+    <MobileSheet
+      dark={dark}
+      onClose={onClose}
+      tall
+      showClose
+      footer={(close) => (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)', background: t.card, borderTop: `1px solid ${t.border}` }}>
+          <SheetAction icon={done ? 'clock' : 'check'} label={done ? 'Reabrir' : 'Concluir'} primary={!done} dark={dark} onClick={() => { onConcluir(); close() }} />
+          <SheetAction icon="calendar" label="Reagendar" dark={dark} onClick={() => { onReagendar(); close() }} />
+          <SheetAction icon="clock" label="Lançar" dark={dark} onClick={() => { onLancar(); close() }} />
         </div>
-
-        <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 16px' }}>
+      )}
+    >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 10.5, fontWeight: 700, padding: '4px 10px', borderRadius: 8, background: dark ? 'rgba(139,161,192,0.16)' : '#eef1f5', color: m.c }}>
               <span style={{ width: 6, height: 6, borderRadius: 3, background: m.c }} />{m.label}
@@ -376,15 +389,7 @@ function TaskDetailSheet({ dark, item, pasta, onClose, onConcluir, onReagendar, 
             <div style={{ width: 1, background: t.borderSubtle }} />
             <DetailField dark={dark} icon="clock" label="Status"><span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 12, fontWeight: 700, color: done ? (dark ? '#8db8a0' : '#3f6a54') : (dark ? '#d6a87a' : '#8a6438') }}><span style={{ width: 6, height: 6, borderRadius: 3, background: done ? (dark ? '#8db8a0' : '#6b9e84') : '#c2956b' }} />{done ? 'Concluída' : 'Pendente'}</span></DetailField>
           </div>
-        </div>
-
-        <div style={{ flexShrink: 0, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, padding: '12px 16px calc(env(safe-area-inset-bottom, 0px) + 16px)', background: t.card, borderTop: `1px solid ${t.border}` }}>
-          <SheetAction icon={done ? 'clock' : 'check'} label={done ? 'Reabrir' : 'Concluir'} primary={!done} dark={dark} onClick={onConcluir} />
-          <SheetAction icon="calendar" label="Reagendar" dark={dark} onClick={onReagendar} />
-          <SheetAction icon="clock" label="Lançar" dark={dark} onClick={onLancar} />
-        </div>
-      </div>
-    </div>
+    </MobileSheet>
   )
 }
 
@@ -518,21 +523,25 @@ function RescheduleSheet({ dark, item, onClose, onReagendar }: { dark: boolean; 
   ]
   return (
     <MobileSheet dark={dark} onClose={onClose}>
-      <div style={{ marginBottom: 16 }}>
-        <div style={{ fontSize: 10, fontWeight: 700, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Reagendar</div>
-        <div style={{ fontSize: 17, fontWeight: 600, color: t.primary, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{item.title}</div>
-        {item.subtitle && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 2 }}>{item.subtitle}</div>}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-        {opts.map((o) => (
-          <button key={o.label} type="button" onClick={() => onReagendar(o.date)} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}>
-            <span style={{ color: t.teal }}><MobileIcon name="calendar" size={17} /></span>
-            <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: t.primary }}>{o.label}</span>
-            <MobileIcon name="chevronRight" size={15} style={{ color: t.muted }} />
-          </button>
-        ))}
-      </div>
-      <button type="button" onClick={onClose} style={{ width: '100%', marginTop: 14, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, color: t.primary, fontSize: 14.5, fontWeight: 600 }}>Cancelar</button>
+      {(close) => (
+        <>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Reagendar</div>
+            <div style={{ fontSize: 17, fontWeight: 600, color: t.primary, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{item.title}</div>
+            {item.subtitle && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 2 }}>{item.subtitle}</div>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
+            {opts.map((o) => (
+              <button key={o.label} type="button" onClick={() => { onReagendar(o.date); close() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}>
+                <span style={{ color: t.teal }}><MobileIcon name="calendar" size={17} /></span>
+                <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: t.primary }}>{o.label}</span>
+                <MobileIcon name="chevronRight" size={15} style={{ color: t.muted }} />
+              </button>
+            ))}
+          </div>
+          <button type="button" onClick={close} style={{ width: '100%', marginTop: 14, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, color: t.primary, fontSize: 14.5, fontWeight: 600 }}>Cancelar</button>
+        </>
+      )}
     </MobileSheet>
   )
 }
@@ -541,14 +550,16 @@ function RescheduleSheet({ dark, item, onClose, onReagendar }: { dark: boolean; 
 function TeamRanking({ dark, equipe, currentUserId }: { dark: boolean; equipe: EquipeMember[]; currentUserId: string | null }) {
   const t = mTokens(dark)
   if (equipe.length === 0) return <div style={{ fontSize: 13, color: t.muted, padding: '4px 2px' }}>Sem horas lançadas este mês.</div>
-  const maxHoras = Math.max(...equipe.map((m) => m.horas), 1)
   return (
     <div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {equipe.map((m, i) => {
-          const pct = (m.horas / maxHoras) * 100
-          const billablePct = (m.horasCobraveis / maxHoras) * 100
+          // Barra cheia (100%) dividida proporcionalmente entre cobrável e
+          // não-cobrável do PRÓPRIO total do membro (igual ao desktop) — sem
+          // área em branco relativa ao líder.
           const cobravelPerc = m.horas > 0 ? Math.round((m.horasCobraveis / m.horas) * 100) : 0
+          const billablePct = m.horas > 0 ? (m.horasCobraveis / m.horas) * 100 : 0
+          const naoCobravelPct = 100 - billablePct
           const you = m.id === currentUserId
           return (
             <div key={m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
@@ -563,7 +574,7 @@ function TeamRanking({ dark, equipe, currentUserId }: { dark: boolean; equipe: E
                 </div>
                 <div style={{ display: 'flex', height: 6, borderRadius: 3, background: dark ? '#1e2733' : '#f3f1ea', overflow: 'hidden', marginBottom: 4 }}>
                   <div style={{ width: `${billablePct}%`, background: 'linear-gradient(90deg,#34495e,#46627f)' }} />
-                  <div style={{ width: `${Math.max(0, pct - billablePct)}%`, background: t.teal, opacity: 0.55 }} />
+                  <div style={{ width: `${naoCobravelPct}%`, background: t.teal, opacity: 0.55 }} />
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 10.5, color: t.muted }}>
                   <span>{cobravelPerc}% cobrável</span>

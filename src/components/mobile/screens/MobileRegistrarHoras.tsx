@@ -9,7 +9,7 @@
 // Comportamento (faturável, ato por_hora, contrato) replicado fielmente de
 // src/components/financeiro/TimesheetModal.tsx — não inventar regra nova aqui.
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
@@ -27,6 +27,7 @@ import { formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
 import { mTokens } from '../tokens'
 import MobileIcon from '../MobileIcon'
 import MobileScreenHeader from '../shell/MobileScreenHeader'
+import MobileFullScreen from '../shell/MobileFullScreen'
 
 // ────────────────────────────── tipos locais ──────────────────────────────
 
@@ -154,6 +155,9 @@ export default function MobileRegistrarHoras({
 
   // ── submit ──
   const [loading, setLoading] = useState(false)
+  // dirty = digitou atividade (campo essencial) → confirma descarte ao fechar
+  const dirty = atividade.trim().length > 0
+  const closeApiRef = useRef<{ close: () => void; forceClose: () => void } | null>(null)
 
   const vinculoFixo = !!(prefill?.processoId || prefill?.consultaId)
 
@@ -536,7 +540,8 @@ export default function MobileRegistrarHoras({
       if (error) throw error
       toast.success('Horas registradas com sucesso!')
       onSuccess?.()
-      onClose()
+      // fecha animado, ignorando o guard de descarte (já salvou)
+      ;(closeApiRef.current?.forceClose ?? onClose)()
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro ao registrar horas'
       toast.error(msg)
@@ -553,12 +558,22 @@ export default function MobileRegistrarHoras({
   const lista = buscando ? searchResults : vinculoTipo === 'processo' ? recentesProcesso : recentesConsulta
 
   return (
-    <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: t.page, fontFamily: 'var(--font-sans)' }}>
+    <MobileFullScreen
+      dark={dark}
+      isDirty={dirty}
+      confirmTitle="Descartar lançamento?"
+      confirmMessage="O que você preencheu será perdido."
+      onClose={onClose}
+    >
+      {({ close, forceClose }) => {
+        closeApiRef.current = { close, forceClose }
+        return (
+    <div style={{ position: 'relative', flex: 1, minHeight: 0, width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: t.page, fontFamily: 'var(--font-sans)' }}>
       <MobileScreenHeader
         dark={dark}
         title="Registrar horas"
         subtitle={subtitleHeader.charAt(0).toUpperCase() + subtitleHeader.slice(1)}
-        onBack={onClose}
+        onBack={close}
         backLabel="Cancelar"
       />
 
@@ -833,7 +848,7 @@ export default function MobileRegistrarHoras({
       <div style={{ flexShrink: 0, display: 'flex', gap: 10, padding: '12px 18px calc(env(safe-area-inset-bottom, 0px) + 14px)', borderTop: `1px solid ${t.border}`, background: t.card }}>
         <button
           type="button"
-          onClick={onClose}
+          onClick={close}
           disabled={loading}
           style={{ flex: '0 0 auto', minWidth: 104, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', background: dark ? t.cardAlt : '#fff', border: `1px solid ${t.border}`, color: t.primary, fontSize: 14, fontWeight: 600 }}
         >
@@ -863,6 +878,9 @@ export default function MobileRegistrarHoras({
 
       <style>{'@keyframes mrhSpin{to{transform:rotate(360deg)}}'}</style>
     </div>
+        )
+      }}
+    </MobileFullScreen>
   )
 }
 

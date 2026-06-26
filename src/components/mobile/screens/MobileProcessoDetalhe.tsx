@@ -285,7 +285,7 @@ export default function MobileProcessoDetalhe({ dark, id }: { dark: boolean; id:
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: t.page, fontFamily: 'var(--font-sans)' }}>
 
-      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 110 }}>
+      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 28px)' }}>
 
         {/* ===== header slate ===== */}
         <div style={{ background: 'linear-gradient(160deg,#2c3e50,#34495e 58%,#3f566f)', padding: 'calc(env(safe-area-inset-top, 0px) + 18px) 20px 22px', position: 'relative' }}>
@@ -293,10 +293,6 @@ export default function MobileProcessoDetalhe({ dark, id }: { dark: boolean; id:
             <button type="button" aria-label="Voltar para processos" onClick={() => nav.navigate('/dashboard/processos')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.16)', borderRadius: 11, padding: '8px 14px 8px 10px', cursor: 'pointer', fontFamily: 'inherit', color: '#fff', fontSize: 12.5, fontWeight: 600 }}>
               <span style={{ display: 'flex' }}><MobileIcon name="chevronLeft" size={16} /></span> Processos
             </button>
-            <div style={{ display: 'flex', gap: 7 }}>
-              <button onClick={() => nav.openRegistrarHoras({ processoId: id })} style={hdrIconBtn()}><MobileIcon name="clock" size={15} /></button>
-              <button onClick={() => nav.openNovaTarefa({ processoId: id })} style={hdrIconBtn()}><MobileIcon name="fileText" size={15} /></button>
-            </div>
           </div>
 
           {/* área + status */}
@@ -541,14 +537,6 @@ export default function MobileProcessoDetalhe({ dark, id }: { dark: boolean; id:
         </div>
       </div>
 
-      {/* ===== barra de ações fixa ===== */}
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, display: 'flex', gap: 9, padding: '12px 18px 30px', background: t.card, borderTop: `1px solid ${t.border}`, zIndex: 20 }}>
-        <button onClick={() => nav.openRegistrarHoras({ processoId: id })} style={{ flex: 1, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: 'linear-gradient(135deg,#34495e,#46627f)', color: '#fff', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 10px 22px -10px rgba(52,73,94,0.5)' }}>
-          <MobileIcon name="clock" size={17} /> Lançar horas
-        </button>
-        <button onClick={() => nav.openNovaTarefa({ processoId: id })} style={{ flexShrink: 0, width: 52, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${t.border}`, background: t.page, color: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MobileIcon name="plus" size={19} /></button>
-        <button onClick={() => nav.navigate(`/dashboard/agenda?processo_id=${id}`)} style={{ flexShrink: 0, width: 52, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${t.border}`, background: t.page, color: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MobileIcon name="calendar" size={18} /></button>
-      </div>
     </div>
   )
 }
@@ -607,10 +595,3 @@ function ghostBtnPD(t: ReturnType<typeof mTokens>) {
   } as const
 }
 
-function hdrIconBtn() {
-  return {
-    width: 36, height: 36, borderRadius: 11, cursor: 'pointer', fontFamily: 'inherit',
-    background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.16)', color: '#fff',
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  } as const
-}

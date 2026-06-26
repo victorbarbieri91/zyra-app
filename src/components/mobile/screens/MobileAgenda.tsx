@@ -6,7 +6,7 @@
 // itens agrupados por dia. Ações Reagendar/Horas/Concluir via supabase + refresh.
 // Cores via mTokens; ícones via MobileIcon.
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { addDays, nextMonday, startOfDay, endOfDay, subDays, isBefore, isToday } from 'date-fns'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
@@ -17,6 +17,7 @@ import { useAgendaConsolidada, type AgendaItem } from '@/hooks/useAgendaConsolid
 import { mTokens, agendaMeta } from '../tokens'
 import MobileIcon from '../MobileIcon'
 import MobileSheet from '../shell/MobileSheet'
+import MobileTaskDetailSheet, { type MobileTaskItem } from '../shell/MobileTaskDetailSheet'
 import { useMobileNav } from '../MobileApp'
 
 // ---------- tabela + coluna de data por tipo (conclusão/reagendamento) ----------
@@ -34,6 +35,34 @@ type TipoFiltro = 'todos' | 'tarefa' | 'audiencia' | 'evento'
 // tipo_entidade ('evento') → kind visual ('compromisso')
 function tipoDisplay(tipo: string): 'audiencia' | 'compromisso' | 'tarefa' {
   return tipo === 'audiencia' ? 'audiencia' : tipo === 'evento' ? 'compromisso' : 'tarefa'
+}
+
+// AgendaItem → item normalizado do sheet de detalhe compartilhado
+function toTaskItem(e: AgendaItem): MobileTaskItem {
+  return {
+    id: e.id,
+    tipo: tipoDisplay(e.tipo_entidade),
+    title: e.titulo,
+    descricao: e.descricao,
+    status: e.status,
+    prioridade: e.prioridade,
+    processoId: e.processo_id,
+    numeroCnj: e.processo_numero,
+    casoTitulo: e.caso_titulo,
+    consultivoId: e.consultivo_id,
+    consultivoTitulo: e.consultivo_titulo,
+    dataInicio: e.data_inicio,
+    prazoDataLimite: e.prazo_data_limite,
+    responsaveis: e.todos_responsaveis || e.responsavel_nome,
+    createdAt: e.created_at,
+  }
+}
+
+// prefill do "lançar horas" a partir do item da agenda
+function horasPrefill(i: AgendaItem) {
+  return i.processo_id
+    ? { processoId: i.processo_id, tarefaId: i.tipo_entidade === 'tarefa' ? i.id : undefined }
+    : i.consultivo_id ? { consultaId: i.consultivo_id } : {}
 }
 
 // área inferida (Contencioso = tem processo · Consultivo = tem consulta)
@@ -86,6 +115,9 @@ export default function MobileAgenda({ dark }: { dark: boolean }) {
   const [bucket, setBucket] = useState<Bucket>('hoje')
   const [tipo, setTipo] = useState<TipoFiltro>('todos')
   const [reschedItem, setReschedItem] = useState<AgendaItem | null>(null)
+  const [detailItem, setDetailItem] = useState<AgendaItem | null>(null)
+  // ação pendente após o detalhe fechar (anima) — evita empilhar camadas no histórico
+  const pendingRef = useRef<{ type: 'resched' | 'horas'; item: AgendaItem } | null>(null)
 
   // janela ampla (passado p/ atrasados + futuro p/ próximos) numa única busca.
   const { dataInicio, dataFim } = useMemo(() => {
@@ -270,9 +302,9 @@ export default function MobileAgenda({ dark }: { dark: boolean }) {
                 items={g.rows}
                 overdue={overdue}
                 onConcluir={concluir}
-                onHoras={(i) => nav.openRegistrarHoras(i.processo_id ? { processoId: i.processo_id, tarefaId: i.tipo_entidade === 'tarefa' ? i.id : undefined } : i.consultivo_id ? { consultaId: i.consultivo_id } : {})}
+                onHoras={(i) => nav.openRegistrarHoras(horasPrefill(i))}
                 onResched={setReschedItem}
-                onProcessoClick={(pid) => nav.navigate(`/dashboard/processos/${pid}`)}
+                onOpen={setDetailItem}
               />
             </div>
           )
@@ -281,6 +313,24 @@ export default function MobileAgenda({ dark }: { dark: boolean }) {
 
       {reschedItem && (
         <RescheduleSheet dark={dark} item={reschedItem} onClose={() => setReschedItem(null)} onReagendar={(d) => reagendar(reschedItem, d)} />
+      )}
+
+      {detailItem && (
+        <MobileTaskDetailSheet
+          dark={dark}
+          item={toTaskItem(detailItem)}
+          escritorioId={escritorioAtivo}
+          onClose={() => {
+            const p = pendingRef.current
+            pendingRef.current = null
+            setDetailItem(null)
+            if (p?.type === 'resched') setReschedItem(p.item)
+            else if (p?.type === 'horas') nav.openRegistrarHoras(horasPrefill(p.item))
+          }}
+          onConcluir={() => { void concluir(detailItem) }}
+          onReagendar={() => { pendingRef.current = { type: 'resched', item: detailItem } }}
+          onLancar={() => { pendingRef.current = { type: 'horas', item: detailItem } }}
+        />
       )}
     </div>
   )
@@ -302,14 +352,14 @@ function ActBtn({ icon, label, onClick, variant, dark }: { icon: string; label: 
 }
 
 // ---------- timeline de cards do dia ----------
-function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, onProcessoClick }: {
+function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, onOpen }: {
   dark: boolean
   items: AgendaItem[]
   overdue: boolean
   onConcluir: (i: AgendaItem) => void
   onHoras: (i: AgendaItem) => void
   onResched: (i: AgendaItem) => void
-  onProcessoClick: (processoId: string) => void
+  onOpen: (i: AgendaItem) => void
 }) {
   const t = mTokens(dark)
   return (
@@ -330,7 +380,7 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
             </div>
 
             <div style={{ flex: 1, minWidth: 0, marginBottom: 12, background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, boxShadow: t.shadow, overflow: 'hidden', opacity: done ? 0.72 : 1 }}>
-              <div style={{ padding: '12px 14px 12px' }}>
+              <div onClick={() => onOpen(e)} style={{ padding: '12px 14px 12px', cursor: 'pointer' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
                   <span style={{ width: 6, height: 6, borderRadius: 3, background: m.c, flexShrink: 0 }} />
                   <span style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.09em', textTransform: 'uppercase', color: m.c }}>{m.label}</span>
@@ -345,7 +395,10 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
                   )}
                 </div>
 
-                <div style={{ fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.25, color: done ? t.muted : t.primary, textDecoration: done ? 'line-through' : 'none' }}>{e.titulo}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 600, letterSpacing: '-0.01em', lineHeight: 1.25, color: done ? t.muted : t.primary, textDecoration: done ? 'line-through' : 'none' }}>{e.titulo}</div>
+                  <span style={{ color: t.muted, flexShrink: 0, display: 'flex', marginTop: 2 }}><MobileIcon name="chevronRight" size={15} /></span>
+                </div>
 
                 {/* Partes: processo → "Autor x Réu" (caso_titulo); consultivo → título; senão local */}
                 {(e.caso_titulo || e.consultivo_titulo || e.local) && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 3, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.caso_titulo || e.consultivo_titulo || e.local}</div>}
@@ -354,8 +407,7 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
                   <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 6, flexWrap: 'wrap' }}>
                     {area && (
                       <span
-                        onClick={area === 'Contencioso' && e.processo_id ? () => onProcessoClick(e.processo_id as string) : undefined}
-                        style={{ fontSize: 9, fontWeight: 700, color: t.secondary, letterSpacing: '0.03em', background: dark ? '#161c26' : '#f3f1ea', padding: '2px 6px', borderRadius: 5, flexShrink: 0, cursor: area === 'Contencioso' && e.processo_id ? 'pointer' : 'default' }}
+                        style={{ fontSize: 9, fontWeight: 700, color: t.secondary, letterSpacing: '0.03em', background: dark ? '#161c26' : '#f3f1ea', padding: '2px 6px', borderRadius: 5, flexShrink: 0 }}
                       >{area}</span>
                     )}
                     {e.processo_numero && (
@@ -386,11 +438,14 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
 // ---------- folha de reagendamento ----------
 function RescheduleSheet({ dark, item, onClose, onReagendar }: { dark: boolean; item: AgendaItem; onClose: () => void; onReagendar: (d: Date) => void }) {
   const t = mTokens(dark)
-  const base = item.data_inicio ? parseDBDate(item.data_inicio) : new Date()
+  // mesmas opções do desktop, relativas a HOJE
+  const hoje = new Date()
   const opts: { label: string; date: Date }[] = [
-    { label: 'Amanhã', date: addDays(base, 1) },
-    { label: 'Em 2 dias', date: addDays(base, 2) },
-    { label: 'Próxima semana', date: nextMonday(base) },
+    { label: 'Hoje', date: hoje },
+    { label: 'Amanhã', date: addDays(hoje, 1) },
+    { label: 'Daqui a 2 dias', date: addDays(hoje, 2) },
+    { label: 'Próxima segunda', date: nextMonday(hoje) },
+    { label: 'Daqui a 7 dias', date: addDays(hoje, 7) },
   ]
   const subtitulo = item.caso_titulo || item.consultivo_titulo || item.processo_numero || item.local || ''
   return (

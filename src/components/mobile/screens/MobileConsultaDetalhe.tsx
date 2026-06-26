@@ -276,7 +276,7 @@ export default function MobileConsultaDetalhe({ dark, id }: { dark: boolean; id:
   return (
     <div style={{ position: 'relative', height: '100%', width: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden', background: t.page, fontFamily: 'var(--font-sans)' }}>
 
-      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 110 }}>
+      <div style={{ flex: 1, overflow: 'auto', paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 28px)' }}>
 
         {/* ===== hero ===== */}
         <div style={{ background: t.card, padding: 'calc(env(safe-area-inset-top, 0px) + 22px) 20px 22px', position: 'relative', borderBottom: `1px solid ${t.border}` }}>
@@ -284,7 +284,6 @@ export default function MobileConsultaDetalhe({ dark, id }: { dark: boolean; id:
             <button type="button" aria-label="Voltar para o consultivo" onClick={() => nav.navigate('/dashboard/consultivo')} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: t.page, border: `1px solid ${t.border}`, borderRadius: 11, padding: '8px 14px 8px 10px', cursor: 'pointer', fontFamily: 'inherit', color: t.primary, fontSize: 12.5, fontWeight: 600 }}>
               <span style={{ display: 'flex' }}><MobileIcon name="chevronLeft" size={16} /></span> Consultivo
             </button>
-            <button type="button" onClick={() => nav.navigate(`/dashboard/consultivo/${id}`)} style={hdrIconBtnC(t)}><MobileIcon name="fileText" size={15} /></button>
           </div>
 
           {/* área · prioridade · status */}
@@ -458,14 +457,6 @@ export default function MobileConsultaDetalhe({ dark, id }: { dark: boolean; id:
         </div>
       </div>
 
-      {/* ===== barra de ações fixa ===== */}
-      <div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, display: 'flex', gap: 9, padding: '12px 18px calc(env(safe-area-inset-bottom, 0px) + 18px)', background: t.card, borderTop: `1px solid ${t.border}`, zIndex: 20 }}>
-        <button type="button" onClick={() => nav.openRegistrarHoras({ consultaId: id })} style={{ flex: 1, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', border: 'none', background: 'linear-gradient(135deg,#34495e,#46627f)', color: '#fff', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 10px 22px -10px rgba(52,73,94,0.5)' }}>
-          <MobileIcon name="clock" size={17} /> Lançar horas
-        </button>
-        <button type="button" onClick={() => nav.openNovaTarefa({ consultivoId: id })} style={{ flexShrink: 0, width: 52, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${t.border}`, background: t.page, color: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MobileIcon name="plus" size={19} /></button>
-        <button type="button" onClick={() => nav.navigate(`/dashboard/agenda?consultivo_id=${id}`)} style={{ flexShrink: 0, width: 52, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', border: `1px solid ${t.border}`, background: t.page, color: t.primary, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><MobileIcon name="calendar" size={18} /></button>
-      </div>
     </div>
   )
 }
@@ -489,10 +480,3 @@ function ghostBtnCD(t: MobileTokens) {
   } as const
 }
 
-function hdrIconBtnC(t: MobileTokens) {
-  return {
-    width: 36, height: 36, borderRadius: 11, cursor: 'pointer',
-    background: t.page, border: `1px solid ${t.border}`, color: t.secondary,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-  } as const
-}

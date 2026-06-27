@@ -5,11 +5,11 @@
 // ranking, últimas horas). Cores via mTokens; ícones via MobileIcon.
 
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { addDays } from 'date-fns'
+import { addDays, format } from 'date-fns'
 import { toast } from 'sonner'
 import { useTheme } from 'next-themes'
 import { createClient } from '@/lib/supabase/client'
-import { formatDateTimeForDB } from '@/lib/timezone'
+import { parseDateInBrazil } from '@/lib/timezone'
 import { useAuth } from '@/contexts/AuthContext'
 import { useDashboardAgenda, type AgendaItemDashboard } from '@/hooks/useDashboardAgenda'
 import { useTimesheetRecentes, type TimesheetEntryRecente } from '@/hooks/useTimesheetRecentes'
@@ -181,8 +181,11 @@ export default function MobileHome({ dark }: { dark: boolean }) {
   async function reagendar(item: AgendaItemDashboard, novaData: Date) {
     // o fechamento (animado) é disparado pelo próprio sheet (close()); aqui só grava
     const cfg = TABELA[item.tipo] || TABELA.tarefa
+    // grava no MEIO-DIA de Brasília do dia escolhido — estável em qualquer fuso
+    // (evita o item "pular" de dia perto da meia-noite ao converter pra UTC)
+    const valor = parseDateInBrazil(`${format(novaData, 'yyyy-MM-dd')} 12:00`, 'yyyy-MM-dd HH:mm').toISOString()
     const supabase = createClient()
-    const { error } = await supabase.from(cfg.table).update({ [cfg.dateCol]: formatDateTimeForDB(novaData) }).eq('id', item.id)
+    const { error } = await supabase.from(cfg.table).update({ [cfg.dateCol]: valor }).eq('id', item.id)
     if (error) { toast.error('Não foi possível reagendar'); return }
     toast.success('Reagendado')
     refreshAgenda()

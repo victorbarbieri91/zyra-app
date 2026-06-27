@@ -7,10 +7,10 @@
 // Cores via mTokens; ícones via MobileIcon.
 
 import { useMemo, useRef, useState } from 'react'
-import { addDays, startOfDay, endOfDay, subDays, isBefore, isToday } from 'date-fns'
+import { addDays, startOfDay, endOfDay, subDays, isBefore, isToday, format } from 'date-fns'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { parseDBDate, formatDateTimeForDB } from '@/lib/timezone'
+import { parseDBDate, parseDateInBrazil } from '@/lib/timezone'
 import { useAuth } from '@/contexts/AuthContext'
 import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useAgendaConsolidada, type AgendaItem } from '@/hooks/useAgendaConsolidada'
@@ -209,8 +209,10 @@ export default function MobileAgenda({ dark }: { dark: boolean }) {
   async function reagendar(item: AgendaItem, novaData: Date) {
     // fechamento (animado) é disparado pelo próprio sheet (close())
     const cfg = TABELA[item.tipo_entidade] || TABELA.tarefa
+    // grava no MEIO-DIA de Brasília do dia escolhido — estável em qualquer fuso
+    const valor = parseDateInBrazil(`${format(novaData, 'yyyy-MM-dd')} 12:00`, 'yyyy-MM-dd HH:mm').toISOString()
     const supabase = createClient()
-    const { error } = await supabase.from(cfg.table).update({ [cfg.dateCol]: formatDateTimeForDB(novaData) }).eq('id', item.id)
+    const { error } = await supabase.from(cfg.table).update({ [cfg.dateCol]: valor }).eq('id', item.id)
     if (error) { toast.error('Não foi possível reagendar'); return }
     toast.success('Reagendado')
     refreshItems()
@@ -390,9 +392,7 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
                     </span>
                   ) : done ? (
                     <span style={{ marginLeft: 'auto', fontSize: 9.5, fontWeight: 700, color: t.muted, display: 'flex', alignItems: 'center', gap: 3, flexShrink: 0 }}><MobileIcon name="check" size={11} /> Concluída</span>
-                  ) : (
-                    <span style={{ marginLeft: 'auto', fontSize: 10, color: t.muted, flexShrink: 0 }}>Sem horário</span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>

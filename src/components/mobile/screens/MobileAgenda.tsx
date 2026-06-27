@@ -7,7 +7,7 @@
 // Cores via mTokens; ícones via MobileIcon.
 
 import { useMemo, useRef, useState } from 'react'
-import { addDays, nextMonday, startOfDay, endOfDay, subDays, isBefore, isToday } from 'date-fns'
+import { addDays, startOfDay, endOfDay, subDays, isBefore, isToday } from 'date-fns'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
 import { parseDBDate, formatDateTimeForDB } from '@/lib/timezone'
@@ -16,8 +16,8 @@ import { useEscritorioAtivo } from '@/hooks/useEscritorioAtivo'
 import { useAgendaConsolidada, type AgendaItem } from '@/hooks/useAgendaConsolidada'
 import { mTokens, agendaMeta } from '../tokens'
 import MobileIcon from '../MobileIcon'
-import MobileSheet from '../shell/MobileSheet'
 import MobileTaskDetailSheet, { type MobileTaskItem } from '../shell/MobileTaskDetailSheet'
+import MobileRescheduleSheet from '../shell/MobileRescheduleSheet'
 import { useMobileNav } from '../MobileApp'
 
 // ---------- tabela + coluna de data por tipo (conclusão/reagendamento) ----------
@@ -312,7 +312,7 @@ export default function MobileAgenda({ dark }: { dark: boolean }) {
       </div>
 
       {reschedItem && (
-        <RescheduleSheet dark={dark} item={reschedItem} onClose={() => setReschedItem(null)} onReagendar={(d) => reagendar(reschedItem, d)} />
+        <MobileRescheduleSheet dark={dark} title={reschedItem.titulo} subtitle={reschedItem.caso_titulo || reschedItem.consultivo_titulo || reschedItem.processo_numero || reschedItem.local || undefined} onClose={() => setReschedItem(null)} onReagendar={(d) => reagendar(reschedItem, d)} />
       )}
 
       {detailItem && (
@@ -435,40 +435,3 @@ function AgendaTimeline({ dark, items, overdue, onConcluir, onHoras, onResched, 
   )
 }
 
-// ---------- folha de reagendamento ----------
-function RescheduleSheet({ dark, item, onClose, onReagendar }: { dark: boolean; item: AgendaItem; onClose: () => void; onReagendar: (d: Date) => void }) {
-  const t = mTokens(dark)
-  // mesmas opções do desktop, relativas a HOJE
-  const hoje = new Date()
-  const opts: { label: string; date: Date }[] = [
-    { label: 'Hoje', date: hoje },
-    { label: 'Amanhã', date: addDays(hoje, 1) },
-    { label: 'Daqui a 2 dias', date: addDays(hoje, 2) },
-    { label: 'Próxima segunda', date: nextMonday(hoje) },
-    { label: 'Daqui a 7 dias', date: addDays(hoje, 7) },
-  ]
-  const subtitulo = item.caso_titulo || item.consultivo_titulo || item.processo_numero || item.local || ''
-  return (
-    <MobileSheet dark={dark} onClose={onClose}>
-      {(close) => (
-        <>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: t.muted, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>Reagendar</div>
-            <div style={{ fontSize: 17, fontWeight: 600, color: t.primary, letterSpacing: '-0.015em', lineHeight: 1.2 }}>{item.titulo}</div>
-            {subtitulo && <div style={{ fontSize: 12.5, color: t.secondary, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{subtitulo}</div>}
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-            {opts.map((o) => (
-              <button key={o.label} type="button" onClick={() => { onReagendar(o.date); close() }} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', textAlign: 'left' }}>
-                <span style={{ color: t.teal }}><MobileIcon name="calendar" size={17} /></span>
-                <span style={{ flex: 1, fontSize: 14.5, fontWeight: 600, color: t.primary }}>{o.label}</span>
-                <MobileIcon name="chevronRight" size={15} style={{ color: t.muted }} />
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={close} style={{ width: '100%', marginTop: 14, height: 50, borderRadius: 14, cursor: 'pointer', fontFamily: 'inherit', background: t.card, border: `1px solid ${t.border}`, color: t.primary, fontSize: 14.5, fontWeight: 600 }}>Cancelar</button>
-        </>
-      )}
-    </MobileSheet>
-  )
-}

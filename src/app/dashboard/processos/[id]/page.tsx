@@ -254,6 +254,25 @@ export default function ProcessoDetalhe() {
 
       setProcesso(processoFormatado)
 
+      // Registrar acesso do usuário (alimenta "Acessados recentemente"). Silencioso.
+      void (async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user || !data.escritorio_id) return
+          await supabase.from('processos_acessos').upsert(
+            {
+              user_id: user.id,
+              processo_id: data.id,
+              escritorio_id: data.escritorio_id,
+              acessado_em: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,processo_id' }
+          )
+        } catch {
+          /* não-crítico */
+        }
+      })()
+
       // Guardar dados brutos para edição
       setProcessoRaw({
         id: data.id,

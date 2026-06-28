@@ -8408,6 +8408,52 @@ export type Database = {
           },
         ]
       }
+      processos_acessos: {
+        Row: {
+          acessado_em: string
+          escritorio_id: string
+          id: string
+          processo_id: string
+          user_id: string
+        }
+        Insert: {
+          acessado_em?: string
+          escritorio_id: string
+          id?: string
+          processo_id: string
+          user_id: string
+        }
+        Update: {
+          acessado_em?: string
+          escritorio_id?: string
+          id?: string
+          processo_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "processos_acessos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_acessos_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "processos_processos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "processos_acessos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       processos_alertas_encerramento: {
         Row: {
           codigo_cnj_detectado: number
@@ -11877,6 +11923,9 @@ export type Database = {
           responsavel_id: string | null
           responsavel_nome: string | null
           status: string | null
+          ultima_mov_descricao: string | null
+          ultima_mov_origem: string | null
+          ultima_mov_tipo: string | null
           ultima_movimentacao: string | null
           updated_at: string | null
         }

@@ -12,7 +12,7 @@ import {
   areaLabel, areaChipClass, statusLabel, statusDot, getInitials, avatarColor, formatUltMov,
 } from './processos-ui'
 
-const GRID = 'grid grid-cols-[36px_76px_minmax(0,1.3fr)_minmax(0,1.2fr)_190px_minmax(0,1.4fr)_96px_92px_52px] items-center gap-4'
+const GRID = 'grid grid-cols-[24px_76px_minmax(0,1.3fr)_minmax(0,1.15fr)_208px_minmax(0,1.25fr)_96px_92px_52px] items-center gap-4'
 
 interface RespOption { value: string; label: string }
 
@@ -36,7 +36,7 @@ function CopyCnj({ cnj }: { cnj: string }) {
   const [copiado, setCopiado] = useState(false)
   return (
     <span className="flex items-center gap-1.5 min-w-0 w-full">
-      <span className="text-[11px] text-[#5a6775] dark:text-[#8a97a8] font-mono tracking-[-0.01em] truncate">{cnj}</span>
+      <span className="text-[11px] text-[#5a6775] dark:text-[#8a97a8] font-mono tracking-[-0.01em] whitespace-nowrap">{cnj}</span>
       <button
         onClick={(e) => { e.preventDefault(); e.stopPropagation(); try { navigator.clipboard?.writeText(cnj) } catch {} ; setCopiado(true); setTimeout(() => setCopiado(false), 1400) }}
         title={copiado ? 'Copiado' : 'Copiar número CNJ'}
@@ -145,7 +145,7 @@ export default function ProcessosTabela(props: ProcessosTabelaProps) {
             <span className="text-[11.5px] font-semibold text-[#5a6775] dark:text-[#8a97a8] font-mono tracking-[-0.02em]">{p.numero_pasta || '—'}</span>
             <span className="text-[13.5px] font-semibold text-[#2c3e50] dark:text-[#d8e2ef] truncate tracking-[-0.01em]">{p.cliente_nome || '—'}</span>
             <span className="text-[13px] text-[#5a6775] dark:text-[#8a97a8] truncate">{p.parte_contraria || '—'}</span>
-            <span className="min-w-0 pr-3">{p.numero_cnj ? <CopyCnj cnj={p.numero_cnj} /> : <span className="text-[11px] text-[#9aa1a8] dark:text-[#5a6675]">—</span>}</span>
+            <span className="min-w-0 pr-2">{p.numero_cnj ? <CopyCnj cnj={p.numero_cnj} /> : <span className="text-[11px] text-[#9aa1a8] dark:text-[#5a6675]">—</span>}</span>
             <span className="min-w-0">
               <span className="block text-[12.5px] text-[#2c3e50] dark:text-[#d8e2ef] truncate leading-[1.35]">
                 {p.ultima_mov_descricao || p.ultima_mov_tipo || 'Sem movimentações'}

@@ -818,7 +818,7 @@ export default function ProcessoFinanceiro({ processo }: ProcessoFinanceiroProps
                       <p className="text-xs text-slate-500 dark:text-slate-400">{d.categoria}</p>
                       <span className="text-slate-300 dark:text-slate-600">•</span>
                       <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {formatBrazilDate(new Date(d.data_vencimento))}
+                        {formatBrazilDate(d.data_vencimento)}
                       </p>
                       {d.status === 'pago' && (
                         <>

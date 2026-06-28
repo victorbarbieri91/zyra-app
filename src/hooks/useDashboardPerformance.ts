@@ -4,6 +4,7 @@ import { useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
+import { parseDBDate, startOfDayInBrazil, getNowInBrazil } from '@/lib/timezone'
 
 export interface EquipeMember {
   id: string
@@ -223,8 +224,12 @@ async function fetchDashboardPerformance(
   let totalVencido = 0
   let totalPendente = 0
 
+  // "Atrasado" = vence antes de hoje (em Brasília). data_vencimento é tipo date,
+  // então comparamos no nível do dia para não contar como vencido algo que vence hoje.
+  const inicioHojeBrasil = startOfDayInBrazil(getNowInBrazil()).getTime()
+
   parcelasPendentesResult.data?.forEach((p: { status: string; data_vencimento: string; valor: number | null }) => {
-    if (p.status === 'atrasado' || (p.status === 'pendente' && new Date(p.data_vencimento) < new Date())) {
+    if (p.status === 'atrasado' || (p.status === 'pendente' && parseDBDate(p.data_vencimento).getTime() < inicioHojeBrasil)) {
       totalVencido += Number(p.valor || 0)
     }
     if (p.status !== 'pago') {

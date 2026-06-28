@@ -31,7 +31,7 @@ import { ptBR } from 'date-fns/locale'
 import { formatCurrency, cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { createClient } from '@/lib/supabase/client'
-import { formatBrazilDateTime, formatBrazilDate } from '@/lib/timezone'
+import { formatBrazilDateTime, formatBrazilDate, parseDBDate } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -733,7 +733,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                 <FichaField label="Vara" span={2}>{processo.vara || '—'}</FichaField>
                 <FichaField label="Comarca">{processo.comarca || '—'}</FichaField>
                 <FichaField label="Distribuição" span={2} mono>
-                  {processo.data_distribuicao ? format(new Date(processo.data_distribuicao), 'dd/MM/yyyy', { locale: ptBR }) : '—'}
+                  {processo.data_distribuicao ? formatBrazilDate(processo.data_distribuicao) : '—'}
                 </FichaField>
 
                 <Sep />
@@ -753,7 +753,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
                     </div>
                     {processo.data_ultima_atualizacao_monetaria && (
                       <div className="text-[10.5px] text-[#9aa1a8] dark:text-slate-500 mt-1">
-                        em {format(new Date(processo.data_ultima_atualizacao_monetaria), 'dd/MM/yyyy', { locale: ptBR })}
+                        em {formatBrazilDate(processo.data_ultima_atualizacao_monetaria)}
                       </div>
                     )}
                   </div>
@@ -1072,7 +1072,7 @@ export default function ProcessoResumo({ processo, topSectionsSlot, vinculosSlot
 
                   const dataRef = new Date(item.data_inicio)
                   const prazo = item.tipo_entidade === 'tarefa' ? item.prazo_data_limite : null
-                  const urgente = !!prazo && (new Date(prazo).getTime() - new Date().setHours(0, 0, 0, 0)) <= 3 * 86400000
+                  const urgente = !!prazo && (parseDBDate(prazo).getTime() - new Date().setHours(0, 0, 0, 0)) <= 3 * 86400000
                   const barColor = urgente
                     ? '#a85a3e'
                     : item.tipo_entidade === 'audiencia'

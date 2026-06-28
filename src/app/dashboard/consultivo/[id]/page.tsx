@@ -46,7 +46,7 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
-import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil } from '@/lib/timezone'
+import { formatBrazilDateTime, formatBrazilDate, parseDateInBrazil, parseDBDate } from '@/lib/timezone'
 import TarefaWizard from '@/components/agenda/TarefaWizard'
 import EventoWizard from '@/components/agenda/EventoWizard'
 import AudienciaWizard from '@/components/agenda/AudienciaWizard'
@@ -322,64 +322,18 @@ export default function ConsultaDetalhePage() {
     try {
       setLoadingAgenda(true)
 
-      const [tarefasRes, eventosRes, audienciasRes] = await Promise.all([
-        supabase
-          .from('agenda_tarefas')
-          .select('id, titulo, status, data_inicio, responsavel_id, prazo_data_limite, profiles!agenda_tarefas_responsavel_id_fkey(nome_completo)')
-          .eq('consultivo_id', params.id)
-          .neq('status', 'cancelada')
-          .order('data_inicio', { ascending: true }),
-        supabase
-          .from('agenda_eventos')
-          .select('id, titulo, status, data_inicio, responsavel_id, profiles!agenda_eventos_responsavel_id_fkey(nome_completo)')
-          .eq('consultivo_id', params.id)
-          .neq('status', 'cancelado')
-          .order('data_inicio', { ascending: true }),
-        supabase
-          .from('agenda_audiencias')
-          .select('id, titulo, status, data_hora, responsavel_id, profiles!agenda_audiencias_responsavel_id_fkey(nome_completo)')
-          .eq('consultivo_id', params.id)
-          .neq('status', 'cancelada')
-          .order('data_hora', { ascending: true })
-      ])
+      // RPC get_agenda_consultivo: já consolida tarefas/eventos/audiências, exclui
+      // itens encerrados/cancelados, vem ordenada por data_inicio e — crucial —
+      // converte a data da tarefa (tipo date) para o meio-dia de Brasília, evitando
+      // o "dia anterior" que acontecia ao ler a data crua com new Date().
+      const { data, error } = await supabase
+        .rpc('get_agenda_consultivo', { p_consultivo_id: params.id })
 
-      const items: any[] = []
-
-      if (tarefasRes.data) {
-        tarefasRes.data.forEach((t: any) => items.push({
-          ...t,
-          tipo_entidade: 'tarefa',
-          responsavel_nome: t.profiles?.nome_completo || null
-        }))
-      }
-      if (eventosRes.data) {
-        eventosRes.data.forEach((e: any) => items.push({
-          ...e,
-          tipo_entidade: 'evento',
-          responsavel_nome: e.profiles?.nome_completo || null
-        }))
-      }
-      if (audienciasRes.data) {
-        audienciasRes.data.forEach((a: any) => items.push({
-          ...a,
-          tipo_entidade: 'audiencia',
-          data_inicio: a.data_hora,
-          responsavel_nome: a.profiles?.nome_completo || null
-        }))
+      if (error) {
+        console.error('Erro ao carregar agenda do consultivo via RPC:', error)
       }
 
-      // Filtrar itens encerrados (ficam apenas nos andamentos): tarefa concluída,
-      // audiência realizada ('realizada') e compromisso realizado ('realizado').
-      const activeItems = items.filter(item =>
-        item.status !== 'concluida' &&
-        item.status !== 'realizada' &&
-        item.status !== 'realizado' &&
-        item.status !== 'cancelada'
-      )
-
-      activeItems.sort((a, b) => new Date(a.data_inicio).getTime() - new Date(b.data_inicio).getTime())
-
-      setAgendaItems(activeItems)
+      setAgendaItems(data ?? [])
       setLoadingAgenda(false)
       // Conclusões de tarefa/compromisso geram andamento automático na tabela → recarrega a timeline
       void loadMovimentacoes()
@@ -1077,7 +1031,7 @@ export default function ConsultaDetalhePage() {
                       }
                       const dataRef = new Date(item.data_inicio)
                       const prazo = item.tipo_entidade === 'tarefa' ? item.prazo_data_limite : null
-                      const urgente = !!prazo && (new Date(prazo).getTime() - new Date().setHours(0, 0, 0, 0)) <= 3 * 86400000
+                      const urgente = !!prazo && (parseDBDate(prazo).getTime() - new Date().setHours(0, 0, 0, 0)) <= 3 * 86400000
                       const barColor = urgente ? '#a85a3e' : item.tipo_entidade === 'audiencia' ? '#3f7376' : item.tipo_entidade === 'evento' ? '#6a85a8' : '#89bcbe'
                       const resps: string[] = item.responsavel_nome ? [item.responsavel_nome] : []
                       return (

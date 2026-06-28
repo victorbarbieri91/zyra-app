@@ -4,7 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { createClient } from '@/lib/supabase/client'
 import { useEscritoriosDoGrupoUsuario } from './useEscritoriosDoGrupoUsuario'
-import { startOfDayInBrazil, endOfDayInBrazil, formatBrazilTime, parseDBDate } from '@/lib/timezone'
+import { startOfDayInBrazil, endOfDayInBrazil, formatBrazilTime, parseDBDate, isToday } from '@/lib/timezone'
 
 export interface AgendaItemDashboard {
   id: string
@@ -102,7 +102,7 @@ async function fetchDashboardAgenda(
 
     // Verificar urgência (prazos vencendo hoje ou prioridade alta)
     const urgente = item.prioridade === 'alta' ||
-      (item.prazo_data_limite && new Date(item.prazo_data_limite).toDateString() === new Date().toDateString())
+      (item.prazo_data_limite && isToday(item.prazo_data_limite))
 
     // Construir subtítulo
     let subtitle = item.descricao || ''

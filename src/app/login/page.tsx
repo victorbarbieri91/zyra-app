@@ -438,7 +438,7 @@ export default function LoginPage() {
   )
 
   const mField = (label: string, child: React.ReactNode) => (
-    <div className="flex flex-col gap-[9px] mb-[18px]">
+    <div className="flex flex-col gap-2 mb-[14px]">
       <span className={M_LAB}>{label}</span>
       {child}
     </div>
@@ -479,7 +479,7 @@ export default function LoginPage() {
       {/* ===== CELULAR: design Tecnológico mobile (tela cheia) ===== */}
       <div className={cn(
         'md:hidden absolute inset-0 z-10 flex flex-col overflow-y-auto px-[26px]',
-        'pt-[calc(env(safe-area-inset-top,0px)+52px)] pb-[calc(env(safe-area-inset-bottom,0px)+34px)]',
+        'pt-[calc(env(safe-area-inset-top,0px)+36px)] pb-[calc(env(safe-area-inset-bottom,0px)+24px)]',
         'bg-[#f5f2eb] dark:bg-[radial-gradient(120%_85%_at_82%_0%,#2c3e50_0%,#22303c_48%,#16202a_100%)]',
       )}>
         {/* grid sutil (dark) */}
@@ -488,23 +488,23 @@ export default function LoginPage() {
         <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="relative z-[2] flex flex-col flex-1">
           {/* hero */}
           <div className="text-center">
-            <img src="/zyra.logo.png" alt="Zyra Legal" className={cn('mx-auto w-auto object-contain dark:brightness-0 dark:invert dark:drop-shadow-[0_0_18px_rgba(137,188,190,0.25)]', mode === 'register' ? 'h-[64px]' : 'h-[70px]')} />
-            <span className="inline-flex items-center gap-2.5 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#6ba9ab] dark:text-[#89bcbe] mt-10 mb-3.5 before:content-[''] before:w-6 before:h-px before:bg-[#6ba9ab] dark:before:bg-[#89bcbe]">
+            <img src="/zyra.logo.png" alt="Zyra Legal" className={cn('mx-auto w-auto object-contain dark:brightness-0 dark:invert dark:drop-shadow-[0_0_18px_rgba(137,188,190,0.25)]', mode === 'register' ? 'h-[46px]' : 'h-[52px]')} />
+            <span className="inline-flex items-center gap-2.5 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#6ba9ab] dark:text-[#89bcbe] mt-6 mb-3 before:content-[''] before:w-6 before:h-px before:bg-[#6ba9ab] dark:before:bg-[#89bcbe]">
               {mode === 'register' ? 'Comece em minutos' : 'Plataforma jurídica'}
             </span>
             {mode === 'register' ? (
-              <h1 className="text-[31px] font-semibold leading-[1.12] tracking-[-0.025em] text-[#2c3e50] dark:text-white m-0">
+              <h1 className="text-[26px] font-semibold leading-[1.1] tracking-[-0.025em] text-[#2c3e50] dark:text-white m-0">
                 <span className="font-normal text-[#9a9385] dark:text-[#6f868f]">Seu escritório,</span><br />em <span className="text-[#6ba9ab] dark:text-[#89bcbe]">ordem.</span>
               </h1>
             ) : (
-              <h1 className="text-[31px] font-semibold leading-[1.12] tracking-[-0.025em] text-[#2c3e50] dark:text-white m-0">
+              <h1 className="text-[26px] font-semibold leading-[1.1] tracking-[-0.025em] text-[#2c3e50] dark:text-white m-0">
                 <span className="font-normal text-[#9a9385] dark:text-[#6f868f]">Bem-vindo</span><br />de <span className="text-[#6ba9ab] dark:text-[#89bcbe]">volta.</span>
               </h1>
             )}
           </div>
 
           {/* campos */}
-          <div className="mt-[42px] flex flex-col">
+          <div className="mt-7 flex flex-col">
             {mode === 'register' ? (
               <>
                 {mField('Nome completo',
@@ -552,7 +552,7 @@ export default function LoginPage() {
           {errorBanner()}
 
           {/* ações */}
-          <div className="mt-7 flex flex-col gap-3.5">
+          <div className="mt-6 flex flex-col gap-3">
             <button type="submit" disabled={loading} className={M_BTN}>
               {loading
                 ? <><Loader2 className="w-5 h-5 animate-spin" />{mode === 'login' ? 'Entrando...' : 'Criando conta...'}</>

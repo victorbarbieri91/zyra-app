@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { Capacitor } from '@capacitor/core'
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Loader2, Eye, EyeOff, Lock, ArrowRight, X, Mail, ArrowLeft, WifiOff, RefreshCw, Check } from 'lucide-react'
@@ -83,6 +82,25 @@ const GRID_DARK: React.CSSProperties = {
   maskImage: 'radial-gradient(90% 90% at 70% 10%,#000 0%,transparent 80%)',
 }
 
+// ---- tokens do mobile (design Tecnológico mobile; alvos de toque maiores) ----
+const M_LAB = 'font-mono text-[10.5px] tracking-[0.14em] uppercase text-[#9a9385] dark:text-[#5d717c]'
+const M_INP = cn(
+  'h-[56px] rounded-[14px] px-[17px] text-[15.5px] w-full transition-colors shadow-none',
+  'bg-[#faf7f0] border-[#e4ded0] text-[#34495e] placeholder:text-[#aaa492]',
+  'focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[rgba(137,188,190,0.18)] focus-visible:border-[#6ba9ab]',
+  'dark:bg-[rgba(255,255,255,0.04)] dark:border-[rgba(255,255,255,0.08)] dark:text-[#e7eef0] dark:placeholder:text-[#5d717c] dark:focus-visible:border-[#89bcbe] dark:focus-visible:ring-[rgba(137,188,190,0.16)]',
+)
+const M_BTN = cn(
+  'h-[58px] w-full rounded-[14px] inline-flex items-center justify-center gap-2.5 text-[16px] font-semibold tracking-[0.02em] text-white transition-all',
+  'bg-gradient-to-r from-[#34495e] to-[#3d566f] shadow-[0_16px_32px_-12px_rgba(44,62,80,0.45)] active:brightness-[0.96]',
+  'dark:from-[#46627f] dark:to-[#6ba9ab] dark:shadow-[0_16px_32px_-10px_rgba(137,188,190,0.4)] disabled:opacity-60 disabled:cursor-not-allowed',
+)
+const M_BTN2 = cn(
+  'h-[54px] w-full rounded-[14px] inline-flex items-center justify-center gap-2 text-[15px] font-semibold transition-colors',
+  'border-[1.5px] border-[#e0d8c8] text-[#34495e] active:bg-[#efeae0]',
+  'dark:border-[rgba(255,255,255,0.16)] dark:text-[#cdd9dd] dark:active:bg-[rgba(255,255,255,0.05)]',
+)
+
 export default function LoginPage() {
   const [mode, setMode] = useState<AuthMode>('login')
   const [email, setEmail] = useState('')
@@ -125,8 +143,10 @@ export default function LoginPage() {
       else localStorage.removeItem('zyra_last_email')
 
       // Ask browser to save credentials for password autofill (apenas no navegador/PWA;
-      // no app nativo a API não existe e o gerenciador de senhas do sistema cuida disso)
-      if (!Capacitor.isNativePlatform() && 'PasswordCredential' in window) {
+      // no app nativo a API não existe e o gerenciador de senhas do sistema cuida disso).
+      // Detecta nativo via window.Capacitor (injetado pelo shell) — sem depender do pacote no build.
+      const isNative = typeof window !== 'undefined' && (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor?.isNativePlatform?.()
+      if (!isNative && 'PasswordCredential' in window) {
         try {
           const cred = new (window as any).PasswordCredential({ id: email, password })
           await navigator.credentials.store(cred)
@@ -417,6 +437,13 @@ export default function LoginPage() {
     </div>
   )
 
+  const mField = (label: string, child: React.ReactNode) => (
+    <div className="flex flex-col gap-[9px] mb-[18px]">
+      <span className={M_LAB}>{label}</span>
+      {child}
+    </div>
+  )
+
   return (
     <div className="fixed inset-0 overflow-hidden bg-[radial-gradient(120%_120%_at_80%_-10%,#efeae0_0%,#f3efe6_42%,#f5f2eb_100%)] dark:bg-[radial-gradient(120%_120%_at_80%_-10%,#2c3e50_0%,#22303c_42%,#16202a_100%)]">
       {/* grid + glows decorativos */}
@@ -449,18 +476,92 @@ export default function LoginPage() {
         {brandPanel}
       </div>
 
-      {/* ===== CELULAR: tela cheia (provisório — modelo dedicado virá depois) ===== */}
-      <div className="md:hidden absolute inset-0 z-10 flex flex-col overflow-y-auto">
-        <div className="shrink-0 bg-[linear-gradient(165deg,#2c3e50_0%,#34495e_52%,#46627f_100%)] px-6 pt-10 pb-8 flex flex-col items-center text-center">
-          <img src="/zyra.logo.png" alt="Zyra Legal" className="h-[44px] w-auto object-contain brightness-0 invert drop-shadow-[0_0_18px_rgba(137,188,190,0.28)]" />
-          <p className="font-mono text-[10px] tracking-[0.18em] uppercase text-[#89bcbe] mt-3">Seu escritório, em ordem</p>
-        </div>
-        <div className="flex-1 px-6 py-8 flex flex-col">
-          <div className="w-full max-w-[420px] mx-auto flex flex-col flex-1 justify-center">
-            {formHead(mode === 'login' ? 'Acesso seguro' : 'Nova conta')}
-            {mode === 'login' ? loginBody('m-login') : registerBody('m-reg')}
+      {/* ===== CELULAR: design Tecnológico mobile (tela cheia) ===== */}
+      <div className={cn(
+        'md:hidden absolute inset-0 z-10 flex flex-col overflow-y-auto px-[26px]',
+        'pt-[calc(env(safe-area-inset-top,0px)+52px)] pb-[calc(env(safe-area-inset-bottom,0px)+34px)]',
+        'bg-[#f5f2eb] dark:bg-[radial-gradient(120%_85%_at_82%_0%,#2c3e50_0%,#22303c_48%,#16202a_100%)]',
+      )}>
+        {/* grid sutil (dark) */}
+        <div aria-hidden className="absolute inset-0 pointer-events-none hidden dark:block" style={{ backgroundImage: 'linear-gradient(rgba(137,188,190,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(137,188,190,.05) 1px,transparent 1px)', backgroundSize: '46px 46px', WebkitMaskImage: 'radial-gradient(90% 60% at 70% 8%,#000,transparent 80%)', maskImage: 'radial-gradient(90% 60% at 70% 8%,#000,transparent 80%)' }} />
+
+        <form onSubmit={mode === 'login' ? handleLogin : handleRegister} className="relative z-[2] flex flex-col flex-1">
+          {/* hero */}
+          <div className="text-center">
+            <img src="/zyra.logo.png" alt="Zyra Legal" className={cn('mx-auto w-auto object-contain dark:brightness-0 dark:invert dark:drop-shadow-[0_0_18px_rgba(137,188,190,0.25)]', mode === 'register' ? 'h-[64px]' : 'h-[70px]')} />
+            <span className="inline-flex items-center gap-2.5 font-mono text-[10.5px] tracking-[0.2em] uppercase text-[#6ba9ab] dark:text-[#89bcbe] mt-10 mb-3.5 before:content-[''] before:w-6 before:h-px before:bg-[#6ba9ab] dark:before:bg-[#89bcbe]">
+              {mode === 'register' ? 'Comece em minutos' : 'Plataforma jurídica'}
+            </span>
+            {mode === 'register' ? (
+              <h1 className="text-[31px] font-semibold leading-[1.12] tracking-[-0.025em] text-[#2c3e50] dark:text-white m-0">
+                <span className="font-normal text-[#9a9385] dark:text-[#6f868f]">Seu escritório,</span><br />em <span className="text-[#6ba9ab] dark:text-[#89bcbe]">ordem.</span>
+              </h1>
+            ) : (
+              <h1 className="text-[31px] font-semibold leading-[1.12] tracking-[-0.025em] text-[#2c3e50] dark:text-white m-0">
+                <span className="font-normal text-[#9a9385] dark:text-[#6f868f]">Bem-vindo</span><br />de <span className="text-[#6ba9ab] dark:text-[#89bcbe]">volta.</span>
+              </h1>
+            )}
           </div>
-        </div>
+
+          {/* campos */}
+          <div className="mt-[42px] flex flex-col">
+            {mode === 'register' ? (
+              <>
+                {mField('Nome completo',
+                  <Input id="m-nome" type="text" autoComplete="name" placeholder="João da Silva" value={nome} onChange={(e) => setNome(e.target.value)} required disabled={loading} className={M_INP} />)}
+                {mField('E-mail',
+                  <Input id="m-reg-email" type="email" autoComplete="email" placeholder="você@escritorio.adv.br" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} className={M_INP} />)}
+                {mField('Senha',
+                  <div className="relative">
+                    <Input id="m-reg-pass" type={showPassword ? 'text' : 'password'} autoComplete="new-password" placeholder="Crie uma senha"
+                      value={password} onChange={(e) => { setPassword(e.target.value); setConfirmPassword(e.target.value) }} required disabled={loading} className={cn(M_INP, 'pr-12')} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-[15px] top-1/2 -translate-y-1/2 text-[#a89f8c] dark:text-[#5d717c]">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>)}
+                <label className="flex items-start gap-3 text-[13.5px] leading-[1.5] text-[#6c6f6a] dark:text-[#8ea3ad] py-2 cursor-pointer">
+                  <Checkbox checked={acceptTerms} onCheckedChange={(c) => setAcceptTerms(c as boolean)} disabled={loading}
+                    className="mt-0.5 h-[22px] w-[22px] rounded-[6px] border-[1.5px] border-[#d6cfbf] dark:border-[rgba(255,255,255,0.18)] data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe] data-[state=checked]:text-[#16202a]" />
+                  <span>Aceito os <a href="#" className="font-semibold text-[#6ba9ab] dark:text-[#89bcbe]">termos de uso</a> e a <a href="#" className="font-semibold text-[#6ba9ab] dark:text-[#89bcbe]">política de privacidade</a></span>
+                </label>
+              </>
+            ) : (
+              <>
+                {mField('E-mail',
+                  <Input id="m-email" type="email" autoComplete="email" placeholder="você@escritorio.adv.br" value={email} onChange={(e) => setEmail(e.target.value)} required disabled={loading} className={M_INP} />)}
+                {mField('Senha',
+                  <div className="relative">
+                    <Input id="m-pass" type={showPassword ? 'text' : 'password'} autoComplete="current-password" placeholder="••••••••"
+                      value={password} onChange={(e) => setPassword(e.target.value)} required disabled={loading} className={cn(M_INP, 'pr-12')} />
+                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-[15px] top-1/2 -translate-y-1/2 text-[#a89f8c] dark:text-[#5d717c]">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>)}
+                <div className="flex items-center justify-between mt-1">
+                  <label className="flex items-center gap-2.5 text-[14.5px] text-[#6c6f6a] dark:text-[#8ea3ad] cursor-pointer select-none py-2">
+                    <Checkbox checked={keepConnected} onCheckedChange={(c) => setKeepConnected(c as boolean)}
+                      className="h-[22px] w-[22px] rounded-[6px] border-[#89bcbe] data-[state=checked]:bg-[#89bcbe] data-[state=checked]:border-[#89bcbe] data-[state=checked]:text-[#16202a]" />
+                    Manter conectado
+                  </label>
+                  <button type="button" onClick={() => setShowForgotPassword(true)} className="text-[14.5px] font-semibold text-[#6ba9ab] dark:text-[#89bcbe] py-2">Esqueceu a senha?</button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {errorBanner()}
+
+          {/* ações */}
+          <div className="mt-7 flex flex-col gap-3.5">
+            <button type="submit" disabled={loading} className={M_BTN}>
+              {loading
+                ? <><Loader2 className="w-5 h-5 animate-spin" />{mode === 'login' ? 'Entrando...' : 'Criando conta...'}</>
+                : <>{mode === 'login' ? 'Entrar no sistema' : 'Criar conta grátis'}<ArrowRight className="w-4 h-4" /></>}
+            </button>
+            <div className="text-center text-[13.5px] text-[#8c8b7e] dark:text-[#7c8b93]">{mode === 'login' ? 'Ainda não tem conta?' : 'Já possui uma conta?'}</div>
+            <button type="button" onClick={() => switchMode(mode === 'login' ? 'register' : 'login')} className={M_BTN2}>{mode === 'login' ? 'Criar uma conta' : 'Entrar'}</button>
+          </div>
+        </form>
       </div>
 
       {/* Modal: Esqueci a senha */}

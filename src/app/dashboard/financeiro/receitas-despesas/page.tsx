@@ -1276,13 +1276,19 @@ export default function ExtratoFinanceiroPage() {
 
       if (item.tipo_movimento === 'receita') {
         if (item.origem === 'fatura') {
-          // Faturas têm status diferente
-          const statusFatura = novoStatus === 'pago' ? 'paga' : novoStatus === 'vencido' ? 'atrasada' : 'emitida'
+          if (novoStatus === 'pago') {
+            // Redireciona para o modal Efetivar, que chama pagar_fatura RPC
+            // e cria a receita vinculada corretamente
+            setModalAlterarStatus(null)
+            setModalEfetivarItem(item)
+            return
+          }
+          const statusFatura = novoStatus === 'vencido' ? 'atrasada' : 'emitida'
           await supabase
             .from('financeiro_faturamento_faturas')
             .update({
               status: statusFatura,
-              paga_em: novoStatus === 'pago' ? new Date().toISOString() : null,
+              paga_em: null,
             })
             .eq('id', item.origem_id)
         } else if (item.origem === 'nota_debito') {

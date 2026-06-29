@@ -27,9 +27,8 @@ const DEFAULT_PAGE_SIZE = 20
 const ENC = `(${STATUS_ENCERRADOS.join(',')})`
 
 const TABS: { v: AbaProc; l: string }[] = [
-  { v: 'todos', l: 'Todos' },
-  { v: 'meus', l: 'Meus' },
   { v: 'ativos', l: 'Ativos' },
+  { v: 'meus', l: 'Meus' },
   { v: 'arquivados', l: 'Arquivados' },
 ]
 
@@ -38,9 +37,8 @@ export default function ProcessosPage() {
   const viewParam = searchParams.get('view')
   const initialAba: AbaProc =
     viewParam === 'meus' ? 'meus'
-      : viewParam === 'ativos' ? 'ativos'
-        : viewParam === 'encerrados' || viewParam === 'arquivados' ? 'arquivados'
-          : 'todos'
+      : viewParam === 'encerrados' || viewParam === 'arquivados' ? 'arquivados'
+        : 'ativos'
 
   const [processos, setProcessos] = useState<ProcessoLinha[]>([])
   const [loading, setLoading] = useState(true)
@@ -59,10 +57,14 @@ export default function ProcessosPage() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE)
   const [totalCount, setTotalCount] = useState(0)
 
-  // Contadores (cabeçalho + pills de área)
+  // Contadores GLOBAIS (apenas o subtítulo do topo) — não mudam com busca/filtros
   const [totalGeral, setTotalGeral] = useState(0)
   const [ativosCount, setAtivosCount] = useState(0)
+  // Contadores FACETADOS (abas + pills de área) — refletem a busca/filtros atuais
   const [areaCounts, setAreaCounts] = useState<Record<string, number>>({})
+  const [tabMeus, setTabMeus] = useState(0)
+  const [tabAtivos, setTabAtivos] = useState(0)
+  const [tabArquivados, setTabArquivados] = useState(0)
 
   // Identidade
   const [escritorioId, setEscritorioId] = useState<string | null>(null)
@@ -77,6 +79,7 @@ export default function ProcessosPage() {
   const [bulkLoading] = useState(false)
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null)
+  const reqIdRef = useRef(0) // "latest-wins": só a recarga mais recente escreve no estado
   const supabase = createClient()
 
   const { recentes } = useProcessosRecentes(userId, escritorioId, 4)
@@ -123,23 +126,30 @@ export default function ProcessosPage() {
   // Carregar processos
   const loadProcessos = useCallback(async () => {
     if (!escritorioId) return
+    const myId = ++reqIdRef.current
     setLoading(true)
     try {
+      // Aba "Meus" exige usuário carregado; sem ele, lista vazia (bate com a faceta = 0).
+      if (aba === 'meus' && !userId) {
+        if (reqIdRef.current === myId) { setProcessos([]); setTotalCount(0) }
+        return
+      }
+
       let query = supabase
         .from('v_processos_com_movimentacoes')
         .select('id, numero_pasta, numero_cnj, cliente_nome, parte_contraria, area, status, responsavel_id, responsavel_nome, ultima_movimentacao, ultima_mov_descricao, ultima_mov_tipo', { count: 'exact' })
         .eq('escritorio_id', escritorioId)
 
+      // Escopo da aba SEMPRE aplicado — a busca acontece DENTRO da aba atual.
+      // Ativos (padrão) = não-encerrados; Arquivados = encerrados; Meus = meus não-encerrados.
+      if (aba === 'arquivados') query = query.in('status', STATUS_ENCERRADOS as unknown as string[])
+      else if (aba === 'meus') query = query.eq('responsavel_id', userId!).not('status', 'in', ENC)
+      else query = query.not('status', 'in', ENC) // ativos (padrão) = não-encerrados
+
       const termo = debouncedSearch.trim()
       if (termo) {
         const t = `%${termo}%`
         query = query.or(`numero_cnj.ilike.${t},numero_pasta.ilike.${t},parte_contraria.ilike.${t},cliente_nome.ilike.${t}`)
-      } else {
-        // filtro por aba (só quando não está buscando)
-        if (aba === 'ativos') query = query.eq('status', 'ativo')
-        else if (aba === 'arquivados') query = query.in('status', STATUS_ENCERRADOS as unknown as string[])
-        else if (aba === 'meus' && userId) query = query.eq('responsavel_id', userId).not('status', 'in', ENC)
-        else query = query.not('status', 'in', ENC) // todos = não-encerrados
       }
 
       if (area !== 'todas') query = query.eq('area', area)
@@ -157,6 +167,7 @@ export default function ProcessosPage() {
         .order(sortCol, { ascending: sort.dir === 'asc', nullsFirst: false })
         .range(from, to)
 
+      if (reqIdRef.current !== myId) return // resposta obsoleta — ignora (latest-wins)
       if (error) {
         console.error('Erro ao carregar processos:', error)
         return
@@ -164,37 +175,75 @@ export default function ProcessosPage() {
       setTotalCount(count || 0)
       setProcessos((data || []) as ProcessoLinha[])
     } finally {
-      setLoading(false)
+      if (reqIdRef.current === myId) setLoading(false)
     }
   }, [escritorioId, userId, debouncedSearch, aba, area, resp, sort, currentPage, pageSize, supabase])
 
   useEffect(() => { loadProcessos() }, [loadProcessos])
 
-  // Contadores (cabeçalho + pills)
+  // Contadores GLOBAIS (apenas o subtítulo do topo) — não mudam com busca/filtros.
   const carregarContagens = useCallback(async () => {
     if (!escritorioId) return
     const base = () => supabase.from('v_processos_com_movimentacoes').select('id', { count: 'exact', head: true }).eq('escritorio_id', escritorioId)
     const [{ count: total }, { count: ativos }] = await Promise.all([
       base(),
-      base().eq('status', 'ativo'),
+      base().not('status', 'in', ENC),
     ])
     setTotalGeral(total || 0)
     setAtivosCount(ativos || 0)
-    const { data: areasData } = await supabase
-      .from('v_processos_com_movimentacoes')
-      .select('area')
-      .eq('escritorio_id', escritorioId)
-      .not('status', 'in', ENC)
-      .limit(5000)
+  }, [escritorioId, supabase])
+
+  useEffect(() => { carregarContagens() }, [carregarContagens])
+
+  // Contadores FACETADOS (abas + pills de área): cada número = o que apareceria ao
+  // clicar, já considerando a busca + filtros atuais. As pills seguem o escopo da ABA.
+  const carregarFacetas = useCallback(async () => {
+    if (!escritorioId) return
+    const base = () => supabase.from('v_processos_com_movimentacoes').select('id', { count: 'exact', head: true }).eq('escritorio_id', escritorioId)
+    // Mesma cadeia de filtros do loadProcessos, para a contagem bater com o resultado.
+    const comFiltros = (q: ReturnType<typeof base>) => {
+      let r = q
+      const termo = debouncedSearch.trim()
+      if (termo) {
+        const t = `%${termo}%`
+        r = r.or(`numero_cnj.ilike.${t},numero_pasta.ilike.${t},parte_contraria.ilike.${t},cliente_nome.ilike.${t}`)
+      }
+      if (area !== 'todas') r = r.eq('area', area)
+      if (resp !== 'todos') r = r.eq('responsavel_id', resp)
+      return r
+    }
+    const [at, me, ar] = await Promise.all([
+      comFiltros(base().not('status', 'in', ENC)),
+      userId ? comFiltros(base().eq('responsavel_id', userId).not('status', 'in', ENC)) : Promise.resolve({ count: 0 }),
+      comFiltros(base().in('status', STATUS_ENCERRADOS as unknown as string[])),
+    ])
+    setTabAtivos(at.count || 0)
+    setTabMeus(me.count || 0)
+    setTabArquivados(ar.count || 0)
+
+    // Pills de área: escopo da ABA atual + busca + resp, agrupado por área
+    // (sem o filtro de área, para listar todas as áreas disponíveis no escopo).
+    if (aba === 'meus' && !userId) { setAreaCounts({}); return }
+    let aq = supabase.from('v_processos_com_movimentacoes').select('area').eq('escritorio_id', escritorioId).limit(5000)
+    if (aba === 'arquivados') aq = aq.in('status', STATUS_ENCERRADOS as unknown as string[])
+    else if (aba === 'meus') aq = aq.eq('responsavel_id', userId!).not('status', 'in', ENC)
+    else aq = aq.not('status', 'in', ENC)
+    const termo = debouncedSearch.trim()
+    if (termo) {
+      const t = `%${termo}%`
+      aq = aq.or(`numero_cnj.ilike.${t},numero_pasta.ilike.${t},parte_contraria.ilike.${t},cliente_nome.ilike.${t}`)
+    }
+    if (resp !== 'todos') aq = aq.eq('responsavel_id', resp)
+    const { data: areasData } = await aq
     const counts: Record<string, number> = {}
     ;(areasData || []).forEach((r: { area: string | null }) => {
       const a = r.area || 'outros'
       counts[a] = (counts[a] || 0) + 1
     })
     setAreaCounts(counts)
-  }, [escritorioId, supabase])
+  }, [escritorioId, userId, debouncedSearch, area, resp, aba, supabase])
 
-  useEffect(() => { carregarContagens() }, [carregarContagens])
+  useEffect(() => { carregarFacetas() }, [carregarFacetas])
 
   // pills de área = "todas" + áreas presentes (por contagem desc)
   const areaPills = useMemo(() => {
@@ -227,7 +276,9 @@ export default function ProcessosPage() {
   const trocarResp = (r: string) => { setResp(r); setCurrentPage(1) }
   const limparFiltros = () => { setSearchQuery(''); setArea('todas'); setResp('todos'); setCurrentPage(1) }
   const anyFilter = buscando || area !== 'todas' || resp !== 'todos'
-  const showRecentes = !buscando && aba === 'todos' && area === 'todas' && resp === 'todos' && recentes.length > 0
+  const showRecentes = !buscando && aba === 'ativos' && area === 'todas' && resp === 'todos' && recentes.length > 0
+  // Total encontrado na busca = ativos + arquivados (partições disjuntas de status)
+  const totalBusca = tabAtivos + tabArquivados
 
   // seleção em massa
   const toggleSelection = (id: string) => setSelectedIds(prev => {
@@ -259,7 +310,7 @@ export default function ProcessosPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <NovoProcessoDropdown onProcessoCriado={() => { loadProcessos(); carregarContagens() }} />
+          <NovoProcessoDropdown onProcessoCriado={() => { loadProcessos(); carregarContagens(); carregarFacetas() }} />
         </div>
       </div>
 
@@ -341,28 +392,32 @@ export default function ProcessosPage() {
         <span className="text-[11px] font-bold uppercase tracking-[0.13em] text-[#9aa1a8] dark:text-[#5a6675]">
           {buscando ? 'Resultados' : 'Todos os processos'}
         </span>
-        {buscando ? (
-          <span className="text-[12px] text-[#5a6775] dark:text-[#8a97a8]">
-            <strong className="text-[#2c3e50] dark:text-[#d8e2ef] font-mono">{totalCount}</strong> {totalCount === 1 ? 'processo' : 'processos'}
-            {debouncedSearch.trim() && <> para “<span className="text-[#2c3e50] dark:text-[#d8e2ef] font-semibold">{debouncedSearch.trim()}</span>”</>}
-          </span>
-        ) : (
-          <div className="flex gap-0.5 bg-[#ece9e2] dark:bg-[#1a212c] p-[3px] rounded-[9px]">
-            {TABS.map(s => (
+        {/* abas sempre visíveis — durante a busca, definem o escopo (todos/meus/ativos/arquivados) */}
+        <div className="flex gap-0.5 bg-[#ece9e2] dark:bg-[#1a212c] p-[3px] rounded-[9px]">
+          {TABS.map(s => {
+            const n = s.v === 'ativos' ? tabAtivos : s.v === 'meus' ? tabMeus : tabArquivados
+            return (
               <button
                 key={s.v}
                 onClick={() => trocarAba(s.v)}
                 className={cn(
-                  'px-3 py-[5px] rounded-[7px] text-[11.5px] font-semibold transition-colors',
+                  'px-3 py-[5px] rounded-[7px] text-[11.5px] font-semibold inline-flex items-center gap-1.5 transition-colors',
                   aba === s.v
                     ? 'bg-[#ffffff] dark:bg-[#2a3544] text-[#34495e] dark:text-[#e2e8f0] shadow-sm'
                     : 'text-[#857f73] dark:text-[#8a97a8] hover:text-[#34495e] dark:hover:text-slate-300'
                 )}
               >
                 {s.l}
+                <span className="text-[10px] font-bold font-mono opacity-60">{n}</span>
               </button>
-            ))}
-          </div>
+            )
+          })}
+        </div>
+        {buscando && (
+          <span className="text-[12px] text-[#5a6775] dark:text-[#8a97a8]">
+            <strong className="text-[#2c3e50] dark:text-[#d8e2ef] font-mono">{totalBusca}</strong> {totalBusca === 1 ? 'processo' : 'processos'} para “<span className="text-[#2c3e50] dark:text-[#d8e2ef] font-semibold">{debouncedSearch.trim()}</span>”
+            <span className="text-[#9aa1a8] dark:text-[#5a6675]"> · {tabAtivos} ativos · {tabArquivados} arquivados</span>
+          </span>
         )}
         <div className="flex-1" />
         {anyFilter && (
@@ -428,7 +483,7 @@ export default function ProcessosPage() {
           onClose={() => { setShowBulkEditModal(false); setBulkEditField(null) }}
           field={bulkEditField}
           selectedIds={Array.from(selectedIds)}
-          onSuccess={() => { loadProcessos(); carregarContagens(); clearSelection() }}
+          onSuccess={() => { loadProcessos(); carregarContagens(); carregarFacetas(); clearSelection() }}
         />
       )}
       <VincularContratoModal

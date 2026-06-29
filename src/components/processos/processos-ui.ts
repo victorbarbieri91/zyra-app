@@ -4,7 +4,7 @@
 
 import { AREA_JURIDICA_LABELS } from '@/lib/constants/areas-juridicas'
 
-export type AbaProc = 'todos' | 'meus' | 'ativos' | 'arquivados'
+export type AbaProc = 'ativos' | 'meus' | 'arquivados'
 export type SortKey = 'pasta' | 'cliente' | 'contraria' | 'mov'
 export type SortDir = 'asc' | 'desc'
 

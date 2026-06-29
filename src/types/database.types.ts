@@ -1957,6 +1957,59 @@ export type Database = {
           },
         ]
       }
+      consultivo_acessos: {
+        Row: {
+          acessado_em: string
+          consulta_id: string
+          escritorio_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          acessado_em?: string
+          consulta_id: string
+          escritorio_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          acessado_em?: string
+          consulta_id?: string
+          escritorio_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultivo_acessos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_acessos_consulta_id_fkey"
+            columns: ["consulta_id"]
+            isOneToOne: false
+            referencedRelation: "v_consultivo_consultas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_acessos_escritorio_id_fkey"
+            columns: ["escritorio_id"]
+            isOneToOne: false
+            referencedRelation: "escritorios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultivo_acessos_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consultivo_consultas: {
         Row: {
           andamentos: Json | null
@@ -11080,6 +11133,7 @@ export type Database = {
           responsavel_id: string | null
           responsavel_nome: string | null
           status: Database["public"]["Enums"]["status_consultivo"] | null
+          tipo: Database["public"]["Enums"]["tipo_consulta"] | null
           titulo: string | null
           updated_at: string | null
         }

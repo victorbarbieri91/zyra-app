@@ -297,6 +297,25 @@ export default function ConsultaDetalhePage() {
 
       setConsulta(consultaFormatada)
       setLoading(false)
+
+      // Registrar acesso do usuário (alimenta "Acessadas recentemente"). Silencioso.
+      void (async () => {
+        try {
+          const { data: { user } } = await supabase.auth.getUser()
+          if (!user || !data.escritorio_id) return
+          await supabase.from('consultivo_acessos').upsert(
+            {
+              user_id: user.id,
+              consulta_id: data.id,
+              escritorio_id: data.escritorio_id,
+              acessado_em: new Date().toISOString(),
+            },
+            { onConflict: 'user_id,consulta_id' }
+          )
+        } catch {
+          /* não-crítico */
+        }
+      })()
     } catch (error) {
       console.error('Erro ao carregar consulta:', error)
       toast.error('Erro ao carregar consulta')

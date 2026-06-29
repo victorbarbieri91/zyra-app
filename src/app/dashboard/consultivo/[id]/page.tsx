@@ -756,7 +756,7 @@ export default function ConsultaDetalhePage() {
 
   return (
     <div className="min-h-screen bg-[#fafaf7] dark:bg-[#0c1017] p-6">
-      <div className="max-w-[1400px] mx-auto space-y-5">
+      <div className="max-w-[1800px] mx-auto space-y-5">
 
         {/* Header V4 */}
         <div className="bg-white dark:bg-[#111826] border border-[#e6e3da] dark:border-[#253345] rounded-[14px] px-6 py-5 shadow-sm">

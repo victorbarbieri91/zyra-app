@@ -58,6 +58,7 @@ import { useEventos, Evento, EventoFormData } from '@/hooks/useEventos'
 import { useRecorrencias } from '@/hooks/useRecorrencias'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { useTimer } from '@/contexts/TimerContext'
+import { AgendaRespFilterProvider, useAgendaRespFilter } from '@/components/agenda/AgendaRespFilterContext'
 
 // Conclui/altera o status de um item de agenda (evento ou audiência) confirmando que a gravação
 // realmente ocorreu. Quando a RLS bloqueia o UPDATE (ex.: usuário é só co-responsável sem
@@ -82,10 +83,11 @@ async function atualizarStatusAgenda(
   }
 }
 
-export default function AgendaPage() {
+function AgendaPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const isMobile = useIsMobile()
+  const { isOculto } = useAgendaRespFilter()
   const filtroUrl = searchParams.get('filtro')
   const filtroInicial = (filtroUrl === 'vencidos' || filtroUrl === 'hoje') ? filtroUrl : null
 
@@ -274,6 +276,9 @@ export default function AgendaPage() {
 
     return agendaItems
       .filter(item => {
+        // Filtro inteligente por responsável (silenciar colegas)
+        if (isOculto(item.responsaveis_ids)) return false
+
         // Mapear tipo_entidade para os filtros
         if (item.tipo_entidade === 'tarefa' && !filters.tipos.tarefa) return false
         if (item.tipo_entidade === 'audiencia' && !filters.tipos.audiencia) return false
@@ -332,7 +337,7 @@ export default function AgendaPage() {
         pessoal: item.pessoal || false,
         recorrencia_id: item.recorrencia_id,
       }))
-  }, [agendaItems, filters, urlFiltroAtivo])
+  }, [agendaItems, filters, urlFiltroAtivo, isOculto])
 
   // Prioridade de exibição por tipo
   const tipoPrioridade: Record<string, number> = {
@@ -360,7 +365,7 @@ export default function AgendaPage() {
   // Eventos do dia selecionado (para sidebar) - com ordenação por urgência
   const eventosDoDia = useMemo(() => {
     return agendaItems
-      .filter(item => isSameDay(parseDBDate(item.data_inicio), selectedDate))
+      .filter(item => !isOculto(item.responsaveis_ids) && isSameDay(parseDBDate(item.data_inicio), selectedDate))
       .sort((a, b) => {
         // Primeiro: ordenar por urgência do prazo fatal (vencido/hoje primeiro)
         const urgenciaA = getUrgenciaPrazoFatal(a)
@@ -379,7 +384,7 @@ export default function AgendaPage() {
         const dataB = parseDBDate(b.data_inicio)
         return dataA.getTime() - dataB.getTime()
       })
-  }, [agendaItems, selectedDate])
+  }, [agendaItems, selectedDate, isOculto])
 
   // Estatísticas para ResumoIA
   const eventosCriticos = useMemo(() => {
@@ -1955,5 +1960,13 @@ export default function AgendaPage() {
         }}
       />
     </div>
+  )
+}
+
+export default function AgendaPage() {
+  return (
+    <AgendaRespFilterProvider>
+      <AgendaPageInner />
+    </AgendaRespFilterProvider>
   )
 }

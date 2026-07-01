@@ -29,6 +29,7 @@ import { EventCardProps } from './EventCard'
 import AgendaFiltersCompact, { EventFiltersState } from './AgendaFiltersCompact'
 import CalendarEventMiniCard, { PRIORIDADE_COR } from './CalendarEventMiniCard'
 import { AgendaViewTabs, AgendaCreateButtons } from './AgendaTopBar'
+import { AgendaResponsavelFilter } from './AgendaResponsavelFilter'
 import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import {
   Popover,
@@ -475,10 +476,11 @@ export default function CalendarGridDnD({
             <AgendaViewTabs viewMode={viewMode} onViewModeChange={onViewModeChange} className="lg:justify-self-center" />
           )}
 
-          {/* direita: criar */}
-          {onCreate && (
-            <AgendaCreateButtons onCreate={onCreate} className="lg:justify-self-end" />
-          )}
+          {/* direita: filtro de responsáveis + criar */}
+          <div className="flex items-center gap-2 flex-wrap lg:justify-self-end">
+            <AgendaResponsavelFilter />
+            {onCreate && <AgendaCreateButtons onCreate={onCreate} />}
+          </div>
         </div>
 
         {/* Faixa de contexto: legenda + dica | filtros */}

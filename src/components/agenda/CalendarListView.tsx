@@ -17,6 +17,8 @@ import { Audiencia } from '@/hooks/useAudiencias'
 import { Evento } from '@/hooks/useEventos'
 import AgendaTimelineRow from './AgendaTimelineRow'
 import { AgendaViewTabs, AgendaCreateButtons } from './AgendaTopBar'
+import { AgendaResponsavelFilter } from './AgendaResponsavelFilter'
+import { useAgendaRespFilter } from './AgendaRespFilterContext'
 import { startOfDay, endOfDay, addDays, subDays, format, isSameDay, isBefore, isToday } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -97,6 +99,7 @@ export default function CalendarListView({
   refreshKey,
   className,
 }: CalendarListViewProps) {
+  const { isOculto } = useAgendaRespFilter()
   const [periodoSelecionado, setPeriodoSelecionado] = useState('proximos-7d')
   const [tipoFiltro, setTipoFiltro] = useState<TipoFiltro>('todos')
 
@@ -169,6 +172,9 @@ export default function CalendarListView({
       )
     }
 
+    // Filtro inteligente por responsável (silenciar colegas)
+    filtered = filtered.filter((item) => !isOculto(item.responsaveis_ids))
+
     // Filtro por tipo (pills)
     if (tipoFiltro !== 'todos') {
       filtered = filtered.filter((item) => item.tipo_entidade === tipoFiltro)
@@ -181,7 +187,7 @@ export default function CalendarListView({
     }
 
     return filtered
-  }, [items, dataInicio, dataFim, userId, tipoFiltro, isPassado])
+  }, [items, dataInicio, dataFim, userId, tipoFiltro, isPassado, isOculto])
 
   // Agrupar por dia e ordenar
   const itemsAgrupados = useMemo(() => {
@@ -305,8 +311,11 @@ export default function CalendarListView({
           <AgendaViewTabs viewMode={viewMode} onViewModeChange={onViewModeChange} className="lg:justify-self-center" />
         )}
 
-        {/* direita: criar */}
-        {onCreate && <AgendaCreateButtons onCreate={onCreate} className="lg:justify-self-end" />}
+        {/* direita: filtro de responsáveis + criar */}
+        <div className="flex items-center gap-2 flex-wrap lg:justify-self-end">
+          <AgendaResponsavelFilter />
+          {onCreate && <AgendaCreateButtons onCreate={onCreate} />}
+        </div>
       </div>
 
       {/* Faixa de contexto: período + filtro de tipo | contador */}

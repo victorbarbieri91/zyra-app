@@ -14,6 +14,8 @@ import KanbanColumn from './KanbanColumn'
 import KanbanTaskCard from './KanbanTaskCard'
 import KanbanAgendaCard, { AgendaCardItem } from './KanbanAgendaCard'
 import { AgendaViewTabs, AgendaCreateButtons } from './AgendaTopBar'
+import { AgendaResponsavelFilter } from './AgendaResponsavelFilter'
+import { useAgendaRespFilter } from './AgendaRespFilterContext'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { createClient } from '@/lib/supabase/client'
@@ -80,6 +82,7 @@ export default function CalendarKanbanView({
   className,
 }: CalendarKanbanViewProps) {
   const supabase = createClient()
+  const { isOculto } = useAgendaRespFilter()
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined)
 
   // Janela de datas visível (dia único ou intervalo) — pedida ao banco para
@@ -363,6 +366,8 @@ export default function CalendarKanbanView({
     // Filtrar tarefas do dia e do usuário logado
     const hoje = startOfDayInBrazil(new Date())
     const tarefasDoDia = todasTarefas.filter((tarefa) => {
+      // Filtro inteligente por responsável (silenciar colegas)
+      if (isOculto(tarefa.responsaveis_ids)) return false
       // Fixa tasks always appear when viewing today (their DB data_inicio is the original creation date)
       if (tarefa.tipo === 'fixa') {
         if (userId && !tarefa.responsaveis_ids?.includes(userId)) return false
@@ -406,12 +411,13 @@ export default function CalendarKanbanView({
       concluida: concluidas,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todasTarefas, selectedDate, userId, dateRange])
+  }, [todasTarefas, selectedDate, userId, dateRange, isOculto])
 
   // Filtrar eventos e audiências do dia e mapear para colunas
   const { eventosPendentes, eventosRealizados, audienciasPendentes, audienciasRealizadas } = useMemo(() => {
     // Eventos do dia (filtrar por responsáveis se userId disponível)
     const eventosDoDia = (todosEventos || []).filter((evento) => {
+      if (isOculto(evento.responsaveis_ids)) return false
       const eventoDate = parseDBDate(evento.data_inicio)
       if (!isDateInView(eventoDate)) return false
       if (userId && !evento.responsaveis_ids?.includes(userId)) return false
@@ -421,6 +427,7 @@ export default function CalendarKanbanView({
 
     // Audiências do dia (filtrar por responsáveis se userId disponível)
     const audienciasDoDia = (todasAudiencias || []).filter((audiencia) => {
+      if (isOculto(audiencia.responsaveis_ids)) return false
       const audienciaDate = parseDBDate(audiencia.data_hora)
       if (!isDateInView(audienciaDate)) return false
       if (userId && !audiencia.responsaveis_ids?.includes(userId)) return false
@@ -435,7 +442,7 @@ export default function CalendarKanbanView({
       audienciasRealizadas: audienciasDoDia.filter(a => a.status === 'realizada'),
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [todosEventos, todasAudiencias, selectedDate, userId, dateRange])
+  }, [todosEventos, todasAudiencias, selectedDate, userId, dateRange, isOculto])
 
   // Converter eventos para AgendaCardItem
   const mapEventoToCard = (evento: Evento): AgendaCardItem => ({
@@ -867,8 +874,11 @@ export default function CalendarKanbanView({
           <AgendaViewTabs viewMode={viewMode} onViewModeChange={onViewModeChange} className="lg:justify-self-center" />
         )}
 
-        {/* direita: criar */}
-        {onCreate && <AgendaCreateButtons onCreate={onCreate} className="lg:justify-self-end" />}
+        {/* direita: filtro de responsáveis + criar */}
+        <div className="flex items-center gap-2 flex-wrap lg:justify-self-end">
+          <AgendaResponsavelFilter />
+          {onCreate && <AgendaCreateButtons onCreate={onCreate} />}
+        </div>
       </div>
 
       {/* faixa de contexto: filtros + dica/contador */}

@@ -3,14 +3,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 
+export interface AgendaFiltroResponsaveis {
+  ocultos: string[]
+}
+
 export interface UserPreferences {
   sidebar_aberta: boolean
   agenda_view_padrao: 'month' | 'week' | 'day' | 'list'
+  agenda_filtro_responsaveis: AgendaFiltroResponsaveis
 }
 
 const defaultPreferences: UserPreferences = {
   sidebar_aberta: false,
-  agenda_view_padrao: 'month'
+  agenda_view_padrao: 'month',
+  agenda_filtro_responsaveis: { ocultos: [] }
 }
 
 export function useUserPreferences() {
